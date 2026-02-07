@@ -1,7 +1,8 @@
 #include "ui_extension.h"
 
 namespace ui_helpers {
-const window_position_t ui_helpers::window_position_null(0, 0, 0, 0);
+
+const window_position_t window_position_null(0, 0, 0, 0);
 
 bool container_window::class_release()
 {
@@ -12,32 +13,7 @@ bool container_window::class_release()
     return get_class_data().class_registered == false;
 }
 
-container_window::container_window() : wnd_host(0){};
-
-initquit_factory_t<container_window_autorelease_t::initquit_t> g_container_window_autorelease_initquit;
-
-void container_window_release_t::register_initquit()
-{
-    g_container_window_autorelease_initquit.get_static_instance().register_window(*this);
-};
-
-void container_window_release_t::deregister_initquit()
-{
-    g_container_window_autorelease_initquit.get_static_instance().deregister_window(*this);
-};
-container_window_autorelease_t::container_window_autorelease_t()
-{
-    register_initquit();
-};
-
-container_window_autorelease_t::~container_window_autorelease_t()
-{
-    deregister_initquit();
-};
-container_window::container_window(const container_window& p_source)
-{
-    assert(0);
-}
+container_window::container_window() : wnd_host(0) {}
 
 HWND container_window::create(
     HWND wnd_parent, LPVOID create_param, const ui_helpers::window_position_t& p_window_position)
@@ -83,7 +59,8 @@ void container_window::destroy()
     class_release();
 }
 
-LRESULT WINAPI container_window::window_proc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
+#pragma warning(suppress : 4996)
+LRESULT WINAPI container_window::window_proc(HWND wnd, UINT msg, WPARAM wp, LPARAM lp) noexcept
 {
     container_window* p_this;
 
@@ -111,7 +88,7 @@ LRESULT WINAPI container_window::window_proc(HWND wnd, UINT msg, WPARAM wp, LPAR
     if (p_this && p_this->get_class_data().want_transparent_background) {
         if (msg == WM_ERASEBKGND || (msg == WM_PRINTCLIENT && (lp & PRF_ERASEBKGND))) {
             HDC dc = (HDC)wp;
-            BOOL b_ret = TRUE;
+            LRESULT b_ret = TRUE;
 
             HWND wnd_parent = GetParent(wnd);
             POINT pt = {0, 0}, pt_old = {0, 0};
@@ -150,42 +127,4 @@ HWND container_window::get_wnd() const
     return wnd_host;
 }
 
-void print_hex_wide(unsigned val, wchar_t*& out, unsigned bytes)
-{
-    unsigned n;
-    for (n = 0; n < bytes; n++) {
-        unsigned char c = (unsigned char)((val >> ((bytes - 1 - n) << 3)) & 0xFF);
-        *(out++) = pfc::format_hex_char(c >> 4);
-        *(out++) = pfc::format_hex_char(c & 0xF);
-    }
-    *out = 0;
-}
-
-print_guid_wide::print_guid_wide(const GUID& p_guid)
-{
-    wchar_t* out = m_data;
-    print_hex_wide(p_guid.Data1, out, 4);
-    *(out++) = '-';
-    print_hex_wide(p_guid.Data2, out, 2);
-    *(out++) = '-';
-    print_hex_wide(p_guid.Data3, out, 2);
-    *(out++) = '-';
-    print_hex_wide(p_guid.Data4[0], out, 1);
-    print_hex_wide(p_guid.Data4[1], out, 1);
-    *(out++) = '-';
-    print_hex_wide(p_guid.Data4[2], out, 1);
-    print_hex_wide(p_guid.Data4[3], out, 1);
-    print_hex_wide(p_guid.Data4[4], out, 1);
-    print_hex_wide(p_guid.Data4[5], out, 1);
-    print_hex_wide(p_guid.Data4[6], out, 1);
-    print_hex_wide(p_guid.Data4[7], out, 1);
-    *out = 0;
-}
-
-void window_class_manager::window_class_release_delayed::callback_run()
-{
-    g_window_class_manager.class_deref(m_guid);
-}
-
-window_class_manager g_window_class_manager;
 } // namespace ui_helpers

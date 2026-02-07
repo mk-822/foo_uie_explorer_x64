@@ -10,6 +10,10 @@ namespace uie {
 
 /**
  * \brief Interface for visualisation extension hosts.
+ *
+ * \note The `visualisation_host` and `visualisation` services relate to
+ * legacy functionality. They can be ignored when implementing any new panels
+ * or visualisations.
  */
 class NOVTABLE visualisation_host : public service_base {
 public:
@@ -36,18 +40,16 @@ public:
 
 /**
  * \brief Service factory for vis extension hosts.
+ *
  * \par Usage example
- * \code
- * static vis_extension_host_factory< my_vis_extension_host > foo_host;
+ * \code{.cpp} * static vis_extension_host_factory<my_vis_extension_host> foo_host;
  * \endcode
  */
 template <class T>
-class visualisation_host_factory : public service_factory_t<T> {
-};
+class visualisation_host_factory : public service_factory_t<T> {};
 
 template <class T>
-class visualization_host_factory : public visualisation_host_factory<T> {
-};
+class visualization_host_factory : public visualisation_host_factory<T> {};
 
 /**
  * \brief Interface for vis_extension service.
@@ -98,13 +100,11 @@ public:
 /**
  * \brief Service factory for vis extensions.
  * \par Usage example
- * \code
- * static vis_extension_factory< my_vis_extension > foo_vis;
+ * \code{.cpp} * static vis_extension_factory<my_vis_extension> foo_vis;
  * \endcode
  */
 template <class T>
-class visualisation_factory : public service_factory_t<T> {
-};
+class visualisation_factory : public service_factory_t<T> {};
 
 // template<class T>
 // class visualization_factory : public visualisation_factory<T>{};

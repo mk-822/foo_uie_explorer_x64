@@ -26,7 +26,7 @@ public:
     virtual const window_ptr& get_window_ptr() const = 0;
 
     virtual bool query(const GUID& p_guid) const { return false; }
-    virtual ~splitter_item_t(){};
+    virtual ~splitter_item_t() {}
 
     template <typename t_class>
     bool query(const t_class*& p_out) const
@@ -48,11 +48,25 @@ public:
         return false;
     }
 
-    void get_panel_config_to_array(pfc::array_t<uint8_t>& p_data, bool reset = false) const
+    void get_panel_config_to_array(pfc::array_t<uint8_t>& p_data, bool reset = false, bool refresh = false) const
     {
-        stream_writer_memblock_ref writer(p_data, reset);
-        get_panel_config(&writer);
+        const auto window = get_window_ptr();
+
+        if (refresh && window.is_valid()) {
+            window->get_config_to_array(p_data, fb2k::noAbort, reset);
+        } else {
+            stream_writer_memblock_ref writer(p_data, reset);
+            get_panel_config(&writer);
+        }
     }
+
+    pfc::array_t<uint8_t> get_panel_config_to_array(bool refresh = false) const
+    {
+        pfc::array_t<uint8_t> data;
+        get_panel_config_to_array(data, false, refresh);
+        return data;
+    }
+
     void set_panel_config_from_ptr(const void* p_data, t_size p_size)
     {
         stream_reader_memblock_ref reader(p_data, p_size);
@@ -151,7 +165,7 @@ public:
 class splitter_item_full_v3_t : public splitter_item_full_v2_t {
 public:
     /**
-     * \brief Gets the additional data associated with this splitter item
+     * \brief Get the additional data associated with this splitter item.
      *
      * \note
      * Check that get_extra_data_format_id() matches your format ID before
@@ -169,7 +183,7 @@ public:
     virtual void get_extra_data(stream_writer* writer) const = 0;
 
     /**
-     * \brief Gets a GUID to identify the format of the data returned by
+     * \brief Get a GUID to identify the format of the data returned by
      *        get_extra_data()
      * \return The format identifier
      */
@@ -220,7 +234,7 @@ public:
 
 class stream_writer_fixedbuffer : public stream_writer {
 public:
-    void write(const void* p_buffer, t_size p_bytes, abort_callback& p_abort)
+    void write(const void* p_buffer, t_size p_bytes, abort_callback& p_abort) override
     {
         if (p_bytes > 0) {
             if (p_bytes > m_bytes - m_bytes_read)
@@ -230,7 +244,9 @@ public:
         }
     }
     stream_writer_fixedbuffer(void* p_out, t_size p_bytes, t_size& p_bytes_read)
-        : m_out(p_out), m_bytes(p_bytes), m_bytes_read(p_bytes_read)
+        : m_out(p_out)
+        , m_bytes(p_bytes)
+        , m_bytes_read(p_bytes_read)
     {
         m_bytes_read = 0;
     }
@@ -258,7 +274,7 @@ struct size_and_dpi {
 /**
  * \brief Subclass of uie::window, specifically for splitters.
  *
- * Splitter classes must support multiple instances
+ * Splitter classes must support multiple instances.
  */
 class NOVTABLE splitter_window : public window {
 public:
@@ -280,36 +296,28 @@ public:
      */
     virtual bool get_config_item_supported(t_size p_index, const GUID& p_type) const { return false; }
 
-    /**
-     * \brief Creates non-modal child configuration dialog.
-     * Since its non-modal, remember to keep a refcounted reference to yourself.
-     * Use WS_EX_CONTROLPARENT
-     */
-    // virtual HWND create_config_window(HWND wnd_parent, const container_window::window_position_t & p_placement)
-    // {return 0;}
-
-    // this config system isn't great. it may be changed.
-    // write in native-endianess (i.e. use write_object_t)
     virtual bool get_config_item(t_size index, const GUID& p_type, stream_writer* p_out, abort_callback& p_abort) const
     {
         return false;
-    };
+    }
 
     bool get_config_item(t_size index, const GUID& p_type, stream_writer* p_out) const
     {
         abort_callback_dummy p_abort;
         return get_config_item(index, p_type, p_out, p_abort);
     }
+
     virtual bool set_config_item(t_size index, const GUID& p_type, stream_reader* p_source, abort_callback& p_abort)
     {
         return false;
-    };
+    }
+
     template <typename class_t>
     bool set_config_item_t(t_size index, const GUID& p_type, const class_t& p_val, abort_callback& p_abort)
     {
         stream_reader_memblock_ref reader(&p_val, sizeof(class_t));
         return set_config_item(index, p_type, &reader, p_abort);
-    };
+    }
 
     template <class T>
     bool get_config_item(t_size p_index, const GUID& p_type, T& p_out, abort_callback& p_abort) const
@@ -332,12 +340,12 @@ public:
     /** This method may be called on both active and inactive (i.e. no window) instances */
     virtual void replace_panel(t_size index, const splitter_item_t* p_item) = 0;
     virtual t_size get_panel_count() const = 0;
-    virtual t_size get_maximum_panel_count() const { return pfc_infinite; };
+    virtual t_size get_maximum_panel_count() const { return pfc_infinite; }
 
     /** Reserved for future use */
-    virtual void register_callback(class splitter_callback* p_callback){};
+    virtual void register_callback(class splitter_callback* p_callback) {}
     /** Reserved for future use */
-    virtual void deregister_callback(class splitter_callback* p_callback){};
+    virtual void deregister_callback(class splitter_callback* p_callback) {}
 
 protected:
     /**
@@ -390,7 +398,7 @@ public:
         for (i = 0; i < count; i++) {
             splitter_item_ptr si;
             get_panel(i, si);
-            if (si->get_window_ptr() == window) {
+            if (si->get_window_ptr().get_ptr() == window.get_ptr()) {
                 p_index = i;
                 return true;
             }
@@ -403,7 +411,7 @@ public:
         for (i = 0; i < count; i++) {
             splitter_item_ptr si;
             get_panel(i, si);
-            if (si->get_window_ptr() == window) {
+            if (si->get_window_ptr().get_ptr() == window.get_ptr()) {
                 remove_panel(i);
                 return;
             }
@@ -426,7 +434,7 @@ public:
 class NOVTABLE splitter_window_v2 : public splitter_window {
 public:
     /**
-     * \brief Checks if a point is within this splitter window. Used for live layout editing.
+     * \brief Check if a point is within this splitter window. Used for live layout editing.
      *
      * \param  [in]     wnd_point        The window the original mouse message was being sent to.
      * \param  [in]     pt_screen        The point being checked.
@@ -441,10 +449,10 @@ public:
     virtual bool is_point_ours(HWND wnd_point, const POINT& pt_screen, pfc::list_base_t<uie::window::ptr>& p_hierarchy)
     {
         return false;
-    };
+    }
 
     /**
-     * \brief Checks if windows can be inserted into this splitter. Used for live editing.
+     * \brief Check if windows can be inserted into this splitter. Used for live editing.
      *
      * Implement this by calling uie::window::is_available on each window.
      *
@@ -454,7 +462,9 @@ public:
      *                                        A set bit indicates the respective window cannot be inserted.
      */
     virtual void get_supported_panels(
-        const pfc::list_base_const_t<uie::window::ptr>& p_windows, bit_array_var& p_mask_unsupported){};
+        const pfc::list_base_const_t<uie::window::ptr>& p_windows, bit_array_var& p_mask_unsupported)
+    {
+    }
 
     FB2K_MAKE_SERVICE_INTERFACE(splitter_window_v2, splitter_window);
 };

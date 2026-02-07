@@ -102,6 +102,8 @@ public:
     virtual t_button_guid get_guid_type() const { return BUTTON_GUID_MENU_ITEM_MAIN; }
 
     /**
+     * \deprecated Use button_v2::get_item_bitmap() instead.
+     *
      * \brief Get a handle to a bitmap and its transparency mask of the menu item.
      *
      * Caller presumes ownership of bitmap.
@@ -116,15 +118,16 @@ public:
      * \note Ensure you do not create a mask bitmap if you fail to create main bitmap
      *
      * \remark    Masks generated from a colour are only supported on bitmaps with
-     *            a colour depth less than or equal too 8bpp.
+     *            a colour depth less than or equal to 8bpp.
      *
      * \return HBITMAP of menu item
      */
     virtual HBITMAP get_item_bitmap(unsigned command_state_index, COLORREF cr_btntext, t_mask& p_mask_type,
-        COLORREF& cr_mask, HBITMAP& bm_mask) const = 0;
+        COLORREF& cr_mask, HBITMAP& bm_mask) const
+        = 0;
 
     /**
-     * \brief Get type of button
+     * \brief Get the type of the button.
      *
      * \return Type of button
      *
@@ -132,14 +135,14 @@ public:
      */
     virtual t_button_type get_button_type() const { return BUTTON_TYPE_NORMAL; }
     /**
-     * \brief Gets menu items for drop-down buttons
+     * \brief Gets menu items for drop-down buttons.
      *
      * \param [out]    p_out        Receives menu items
      */
     virtual void get_menu_items(menu_hook_t& p_out) {}
 
     /**
-     * \brief Gets buttons state
+     * \brief Get the current button state.
      *
      * \return Button state
      *
@@ -148,53 +151,50 @@ public:
     virtual unsigned get_button_state() const { return BUTTON_STATE_DEFAULT; }
 
     /**
-     * \brief Gets current state of the command. For example, in a "Play or pause"
-     * command this would indicate the play or pause state
+     * \brief Get the current state of the command. For example, in a "Play or pause"
+     * command this would indicate the play or pause state.
+     *
+     * \warning This method is not currently used.
      *
      * \return Index of current command state
      */
-    virtual unsigned get_command_state_index() const // NCI
-    {
-        return 0;
-    }
+    virtual unsigned get_command_state_index() const { return 0; }
 
     /**
-     * \brief Gets total count of possible command states
+     * \brief Get the total number of possible command states.
+     *
+     * \warning This method is not currently used.
      *
      * \return Total count of possible command states
      */
-    virtual unsigned get_command_state_count() const // NCI
-    {
-        return 1;
-    }
+    virtual unsigned get_command_state_count() const { return 1; }
 
     /**
-     * \brief Gets name of specified command state
+     * \brief Get the name of specified command state.
+     *
+     * \warning This method is not currently used.
      *
      * \param [in]    index        Index of command state's name to retrieve
      * \param [out]   p_out        Receives command state name
      */
-    virtual void get_command_state_name(unsigned index, pfc::string_base& p_out) const // NCI
-    {
-        p_out = "Default";
-    }
+    virtual void get_command_state_name(unsigned index, pfc::string_base& p_out) const { p_out = "Default"; }
 
     /**
-     * \brief Registers a button_callback class to receive callbacks
+     * \brief Register a button_callback class to receive callbacks.
      *
      * \param [in]    p_callback    Reference to callback object requesting callbacks
      */
-    virtual void register_callback(button_callback& p_callback){};
+    virtual void register_callback(button_callback& p_callback) {}
 
     /**
-     * \brief Deregisters a button_callback class to stop receiving callbacks
+     * \brief Deregister a button_callback class to stop receiving callbacks.
      *
      * \param [in]    p_callback    Reference to callback object being deregistered.
      *
      * The object implementing this method must not keep any references to the specified
      * callback object after this method returns
      */
-    virtual void deregister_callback(button_callback& p_callback){};
+    virtual void deregister_callback(button_callback& p_callback) {}
 
     FB2K_MAKE_SERVICE_INTERFACE_ENTRYPOINT(button);
 };
@@ -223,30 +223,35 @@ public:
      *
      * \note Use alpha channel for transparency.
      *
+     * \note You can vary the returned image depending on whether dark mode is active by using
+     *       cui::colours::is_dark_mode_active(). All button images are flushed when the dark
+     *       mode status changes.
+     *
      * \return Handle of image
      */
     virtual HANDLE get_item_bitmap(unsigned command_state_index, COLORREF cr_btntext, unsigned cx_hint,
-        unsigned cy_hint, unsigned& handle_type) const = 0;
+        unsigned cy_hint, unsigned& handle_type) const
+        = 0;
 
     /**
-     * \brief Not used.
+     * \brief Deprecated uie::button method, not used for uie::button_v2.
      */
-    virtual HBITMAP get_item_bitmap(unsigned command_state_index, COLORREF cr_btntext, t_mask& p_mask_type,
-        COLORREF& cr_mask, HBITMAP& bm_mask) const
+    HBITMAP get_item_bitmap(unsigned command_state_index, COLORREF cr_btntext, t_mask& p_mask_type, COLORREF& cr_mask,
+        HBITMAP& bm_mask) const override
     {
-        return NULL;
+        return nullptr;
     }
 
     FB2K_MAKE_SERVICE_INTERFACE(button_v2, button);
 };
 
-/** \brief Sub-class of uie::button, for buttons based upon a context menu item */
+/** \brief Subclass of uie::button, for buttons based upon a context menu item */
 class NOVTABLE menu_button : public button {
 public:
     /**
-     * \brief Sets subcommand that subsequent function calls will refer to.
+     * \brief Set the subcommand that subsequent function calls will refer to.
      *
-     * Called after instantiation, but before other command-related methods.
+     * Called after instantiation and before other command-related methods.
      *
      * \param [in]    p_subcommand    Specifies the subcommand that this object wll represent
      */
@@ -255,30 +260,30 @@ public:
     FB2K_MAKE_SERVICE_INTERFACE(menu_button, button);
 };
 
-/** \brief Sub-class of uie::button, for buttons that implement their own command */
+/** \brief Subclass of uie::button, for buttons that implement their own command */
 class NOVTABLE custom_button : public button {
 public:
-    virtual t_button_guid get_guid_type() const { return BUTTON_GUID_BUTTON; }
+    t_button_guid get_guid_type() const override { return BUTTON_GUID_BUTTON; }
 
     /**
-     * \brief Executes the custom button's command
+     * \brief Execute the custom button's command.
      *
      * \param [in]    p_items        Items to perform the command on
      */
     virtual void execute(const pfc::list_base_const_t<metadb_handle_ptr>& p_items) = 0;
 
     /**
-     * \brief Gets the name of the custom button
+     * \brief Get the name of the custom button.
      *
-     * \param [out]    p_out        Recieves the name of the button, UTF-8 encoded
+     * \param [out]    p_out        Receives the name of the button, UTF-8 encoded
      */
     virtual void get_name(pfc::string_base& p_out) const = 0;
 
     /**
-     * \brief Gets the description of the custom button
+     * \brief Get the description of the custom button.
      *
-     * \param [out]    p_out        Recieves the description of the button, UTF-8 encoded
-     * \return                    true iff the button has a description
+     * \param [out]    p_out      Receives the description of the button, UTF-8 encoded
+     * \return                    whether p_out was set to a non-empty value
      */
     virtual bool get_description(pfc::string_base& p_out) const { return false; }
 
@@ -302,8 +307,7 @@ public:
 
 /** \brief Service factory for buttons. */
 template <class T>
-class button_factory : public service_factory_t<T> {
-};
+class button_factory : public service_factory_t<T> {};
 
 }; // namespace uie
 

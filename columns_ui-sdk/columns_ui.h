@@ -30,9 +30,6 @@ constexpr GUID guid_playlist_switcher{0xc2cf9425, 0x540, 0x4579, {0xab, 0x3f, 0x
 
 constexpr GUID guid_playlist_tabs{0xabb72d0d, 0xdbf0, 0x4bba, {0x8c, 0x68, 0x33, 0x57, 0xeb, 0xe0, 0x7a, 0x4d}};
 
-[[deprecated]] constexpr GUID guid_playlist_view{
-    0xf20bed8f, 0x225b, 0x46c3, {0x9f, 0xc7, 0x45, 0x4c, 0xed, 0xb6, 0xcd, 0xad}};
-
 constexpr GUID guid_vertical_splitter{0x77653a44, 0x66d1, 0x49e0, {0x9a, 0x7a, 0x1c, 0x71, 0x89, 0x8c, 0x4, 0x41}};
 
 constexpr GUID guid_horizontal_splitter{0x8fa0bc24, 0x882a, 0x4fff, {0x8a, 0x3b, 0x21, 0x5e, 0xa7, 0xfb, 0xd0, 0x7f}};
@@ -117,7 +114,8 @@ typedef service_ptr_t<control> control_ptr;
 class global_variable {
 public:
     global_variable(const char* p_name, t_size p_name_length, const char* p_value, t_size p_value_length)
-        : m_name(p_name, p_name_length), m_value(p_value, p_value_length)
+        : m_name(p_name, p_name_length)
+        , m_value(p_value, p_value_length)
     {
     }
     inline const char* get_name() const { return m_name; }
@@ -131,8 +129,8 @@ class global_variable_list : public pfc::ptr_list_t<global_variable> {
 public:
     const char* find_by_name(const char* p_name, t_size length)
     {
-        unsigned n, count = get_count();
-        for (n = 0; n < count; n++) {
+        size_t count = get_count();
+        for (size_t n = 0; n < count; n++) {
             const char* ptr = get_item(n)->get_name();
             if (!stricmp_utf8_ex(p_name, length, ptr, pfc_infinite))
                 return get_item(n)->get_value();
@@ -152,15 +150,15 @@ class titleformat_hook_global_variables : public titleformat_hook {
     global_variable_list& p_vars;
 
 public:
-    virtual bool process_field(
-        titleformat_text_out* p_out, const char* p_name, unsigned p_name_length, bool& p_found_flag)
+    bool process_field(
+        titleformat_text_out* p_out, const char* p_name, size_t p_name_length, bool& p_found_flag) override
     {
         p_found_flag = false;
         return false;
     }
 
-    virtual bool process_function(titleformat_text_out* p_out, const char* p_name, unsigned p_name_length,
-        titleformat_hook_function_params* p_params, bool& p_found_flag)
+    bool process_function(titleformat_text_out* p_out, const char* p_name, size_t p_name_length,
+        titleformat_hook_function_params* p_params, bool& p_found_flag) override
     {
         p_found_flag = false;
         if (set && !stricmp_utf8_ex(p_name, p_name_length, "set_global", pfc_infinite)) {
@@ -198,7 +196,7 @@ public:
         } else
             return false;
     }
-    inline titleformat_hook_global_variables(global_variable_list& vars) : p_vars(vars){};
+    inline titleformat_hook_global_variables(global_variable_list& vars) : p_vars(vars) {}
 };
 
 namespace fcl {
@@ -255,16 +253,21 @@ public:
 /** Helper. Use group_impl_factory below. */
 class group_impl : public group {
 public:
-    virtual void get_name(pfc::string_base& p_out) const { p_out = m_name; }
-    virtual void get_description(pfc::string_base& p_out) const { p_out = m_desc; }
-    virtual const GUID& get_guid() const { return m_guid; }
-    virtual const GUID& get_parent_guid() const { return m_parent_guid; }
+    void get_name(pfc::string_base& p_out) const override { p_out = m_name; }
+    void get_description(pfc::string_base& p_out) const override { p_out = m_desc; }
+    const GUID& get_guid() const override { return m_guid; }
+    const GUID& get_parent_guid() const override { return m_parent_guid; }
 
     GUID m_guid, m_parent_guid;
     pfc::string8 m_name, m_desc;
 
     group_impl(const GUID& pguid, const char* pname, const char* pdesc, const GUID& pguidparent = pfc::guid_null)
-        : m_guid(pguid), m_parent_guid(pguidparent), m_name(pname), m_desc(pdesc){};
+        : m_guid(pguid)
+        , m_parent_guid(pguidparent)
+        , m_name(pname)
+        , m_desc(pdesc)
+    {
+    }
 };
 
 /** Helper. */
@@ -272,7 +275,9 @@ class group_impl_factory : public service_factory_single_t<group_impl> {
 public:
     group_impl_factory(
         const GUID& pguid, const char* pname, const char* pdesc, const GUID& pguidparent = pfc::guid_null)
-        : service_factory_single_t<group_impl>(pguid, pname, pdesc, pguidparent){};
+        : service_factory_single_t<group_impl>(pguid, pname, pdesc, pguidparent)
+    {
+    }
 };
 
 class NOVTABLE dataset : public service_base {
@@ -289,7 +294,8 @@ public:
      * \param [in]	type	Specifies export mode. See t_fcl_type.
      */
     virtual void get_data(
-        stream_writer* p_writer, t_uint32 type, t_export_feedback& feedback, abort_callback& p_abort) const = 0;
+        stream_writer* p_writer, t_uint32 type, t_export_feedback& feedback, abort_callback& p_abort) const
+        = 0;
     /**
      * Sets your data for an import.
      *
@@ -325,14 +331,14 @@ public:
 class NOVTABLE dataset_v2 : public dataset {
 public:
     /**
-     * Determines the order in which data sets are imported when an FCL file 
+     * Determines the order in which data sets are imported when an FCL file
      * is being imported.
-     * 
+     *
      * New in Columns UI 1.1.
-     * 
+     *
      * Data sets with a higher priority value are imported first.
-     * 
-     * This can be used when there are dependencies between global configuration 
+     *
+     * This can be used when there are dependencies between global configuration
      * data and panel instance data. Columns UI uses this internally to deprioritise
      * the toolbar and layout data sets and you will not generally need to override
      * this.
@@ -346,12 +352,10 @@ typedef service_ptr_t<dataset> dataset_ptr;
 typedef service_ptr_t<group> group_ptr;
 
 template <class T>
-class dataset_factory : public service_factory_single_t<T> {
-};
+class dataset_factory : public service_factory_single_t<T> {};
 
 template <class T>
-class group_factory : public service_factory_single_t<T> {
-};
+class group_factory : public service_factory_single_t<T> {};
 
 /** Helper. */
 template <class t_service, class t_service_ptr = service_ptr_t<t_service>>
@@ -363,7 +367,7 @@ public:
         t_service_ptr ptr;
         while (export_enum.next(ptr))
             this->add_item(ptr);
-    };
+    }
     bool find_by_guid(const GUID& guid, t_service_ptr& p_out)
     {
         t_size i, count = this->get_count();
