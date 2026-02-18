@@ -277,6 +277,9 @@
     <ProjectReference Include="..\foobar2000\SDK\foobar2000_SDK.vcxproj">
       <Project>{e8091321-d79d-4575-86ef-064ea1a4a20d}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\foo_uie_explorer_core\foo_uie_explorer_core.csproj">
+      <Project>{2080ce8a-3eb4-4c1e-a917-b17c8e5638e1}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\pfc\pfc.vcxproj">
       <Project>{ebfffb4e-261d-44d3-b89c-957b31a0bf9c}</Project>
     </ProjectReference>

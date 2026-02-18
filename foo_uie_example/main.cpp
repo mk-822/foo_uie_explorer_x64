@@ -47,6 +47,31 @@ private:
 
     /** Our child window */
     HWND wnd_static{nullptr};
+    HMODULE dll;
+
+    void LoadLibraryImpl()
+    {
+        pfc::string8 my_path = core_api::get_my_full_path();
+
+        // 例: "C:\foobar2000\user-components\foo_uie_example\foo_uie_example.dll"
+
+        // 2. ファイル名部分を取り除き、ディレクトリパスにする
+        // scan_filename() は最後の '\\' または '/' の位置を返します
+        t_size name_start = my_path.scan_filename();
+        my_path.truncate(name_start);
+
+        // 3. 読み込みたい DLL 名を結合
+        my_path += "foo_uie_explorer_core.dll";
+
+        // 4. LoadLibrary 用に UTF-8 (pfc::string8) から WideChar (wchar_t*) に変換
+        pfc::stringcvt::string_wide_from_utf8 wide_path(my_path);
+
+        // 5. DLL をロード
+        // ★重要: LOAD_WITH_ALTERED_SEARCH_PATH を使う
+        // これを使わないと、MyExplorerLib.dll がさらに別の DLL に依存している場合、
+        // foobar2000.exe の場所を探しに行ってしまい失敗することがあります。
+        dll = LoadLibraryEx(wide_path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+    }
 };
 
 void ExampleWindow::get_menu_items(uie::menu_hook_t& p_hook)
@@ -65,12 +90,21 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
     case WM_CREATE: {
+        LoadLibraryImpl();
         RECT rc;
         GetClientRect(wnd, &rc);
 
         /** Create a static window, with text "Example". */
-        wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,
-            wnd, HMENU(0), core_api::get_my_instance(), nullptr);
+        if (dll) {
+            auto method = GetProcAddress(dll, "Create");
+            // 3. C#の関数を呼ぶ
+            if (method) {
+                wnd_static = (HWND)method();
+                SetParent(wnd_static, wnd);
+            }
+        }
+        //wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,
+        //    wnd, HMENU(0), core_api::get_my_instance(), nullptr);
     } break;
     case WM_SIZE:
         /** The static control requires this to redraw correctly. */
@@ -81,6 +115,12 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
     case WM_DESTROY:
         /** DefWindowProc will destroy our child window. Set our window handle to nullptr now. */
         wnd_static = nullptr;
+
+        if (dll) {
+            FreeLibrary(dll);
+        }
+        break;
+    default:
         break;
     }
     return DefWindowProc(wnd, msg, wp, lp);

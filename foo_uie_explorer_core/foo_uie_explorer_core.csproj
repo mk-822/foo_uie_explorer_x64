@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+    <RuntimeIdentifier Condition="'$(Configuration)' == 'Release'">win-x64</RuntimeIdentifier>
+    <PublishAot Condition="'$(Configuration)' == 'Release'">true</PublishAot>
+    <PublishAot Condition="'$(Configuration)' == 'Debug'">false</PublishAot>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+  <Target Name="PostBuildPublish" AfterTargets="Build">
+    <Exec Command="dotnet publish &quot;$(ProjectPath)&quot; -c $(Configuration) -r win-x64 --no-build -o &quot;$(SolutionDir)bin\NativeOutput\$(Configuration)&quot;" />
+  </Target>
+  <ItemGroup>
+    <PackageReference Include="runtime.win-x64.Microsoft.DotNet.ILCompiler" Version="10.0.3" />
+  </ItemGroup>
+</Project>
