@@ -103,7 +103,7 @@ void __stdcall Host_ClearPlaylist()
 class ExampleWindow : public uie::container_ui_extension {
 public:
     const GUID& get_extension_guid() const override { return extension_guid; }
-    void get_name(pfc::string_base& out) const override { out = "Example"; }
+    void get_name(pfc::string_base& out) const override { out = "ExplorerTree"; }
     void get_category(pfc::string_base& out) const override { out = "Panels"; }
     unsigned get_type() const override { return uie::type_panel; }
 
