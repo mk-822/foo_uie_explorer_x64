@@ -7,13 +7,13 @@ echo リリース用のZIPファイルを作成しています...
 
 :: バッチファイルの場所 (binフォルダ) を基準にパスを構築
 set "BASE_DIR=%~dp0.."
-set "DLL_CORE=%BASE_DIR%\vc16\bin\NativeOutput\Release\foo_uie_explorer_core.dll"
+set "DLL_CORE=%BASE_DIR%\vc16\bin\NativeOutput\Release\ExplorerTree.dll"
 set "DLL_MAIN=%BASE_DIR%\vc16\Release\foo_uie_explorer_x64.dll"
 set "ZIP_OUT=%~dp0foo_uie_explorer_x64.zip"
 
 :: 必要なDLLが存在するかチェック
 if not exist "%DLL_CORE%" (
-    echo エラー: foo_uie_explorer_core.dll が見つかりません。
+    echo エラー: ExplorerTree.dll が見つかりません。
     echo パス: %DLL_CORE%
     goto :error
 )
