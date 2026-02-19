@@ -18,7 +18,7 @@
 #include "../columns_ui-sdk/ui_extension.h"
 
 /** Declare some information about our component */
-DECLARE_COMPONENT_VERSION("Example Columns UI Panel", "0.1", "compiled: " __DATE__);
+DECLARE_COMPONENT_VERSION("ExplorerTree Columns UI Panel", "1.0", "compiled: " __DATE__);
 
 /**
  * The GUID that identifies our panel.
@@ -133,7 +133,7 @@ private:
         my_path.truncate(name_start);
 
         // 3. 読み込みたい DLL 名を結合
-        my_path += "foo_uie_explorer_core.dll";
+        my_path += "ExplorerTree.dll";
 
         // 4. LoadLibrary 用に UTF-8 (pfc::string8) から WideChar (wchar_t*) に変換
         pfc::stringcvt::string_wide_from_utf8 wide_path(my_path);
