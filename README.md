@@ -18,7 +18,7 @@ foobar2000 (v2.0以降 x64版) の Columns UI 向けエクスプローラー風ツリーパネルコン
 
 ## Installation / インストール方法
 
-1. Download the latest `foo_uie_explorer_x64.zip` from the [binary](../../tree/main/binary) folder. (Note: Releases via GitHub Releases page will be available in the future.)
+1. Download the latest `foo_uie_explorer_x64.zip` from the [binary](../../tree/main/binary) folder.
 2. Open foobar2000 and go to **File > Preferences > Components**.
 3. Drag and drop the downloaded `.zip` file into the Components list.
 4. Click **Apply** and restart foobar2000.
