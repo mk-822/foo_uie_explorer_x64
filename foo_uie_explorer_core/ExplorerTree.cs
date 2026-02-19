@@ -5,7 +5,14 @@ namespace foo_uie_explorer_core
     public class ExplorerTree
     {
         public static ExplorerTreeForm sInstance = new(); // インスタンス保持用
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void OnAddFileToCurrentPlaylist([MarshalAs(UnmanagedType.LPWStr)] string path);
         public static OnAddFileToCurrentPlaylist? sOnAddFile = null;
+
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void OnClearCurrentPlaylist();
+        public static OnClearCurrentPlaylist? sOnClear = null;
 
         [UnmanagedCallersOnly(EntryPoint = "Create")]
         public static IntPtr Create()
@@ -14,10 +21,7 @@ namespace foo_uie_explorer_core
             return sInstance.Handle;
         }
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        public delegate void OnAddFileToCurrentPlaylist([MarshalAs(UnmanagedType.LPWStr)] string path);
 
-        // 3. C++から関数ポインタを受け取るためのエクスポート関数
         [UnmanagedCallersOnly(EntryPoint = "SetOnAddFileToCurrentPlaylist")]
         public static void SetOnAddFileToCurrentPlaylist(IntPtr addPtr)
         {
@@ -30,6 +34,20 @@ namespace foo_uie_explorer_core
         public static void AddFileToCurrentPlaylist(string path)
         {
             sOnAddFile?.Invoke(path);
+        }
+
+        [UnmanagedCallersOnly(EntryPoint = "SetOnClearCurrentPlaylist")]
+        public static void SetOnClearCurrentPlaylist(IntPtr addPtr)
+        {
+            if (addPtr != IntPtr.Zero)
+            {
+                sOnClear = Marshal.GetDelegateForFunctionPointer<OnClearCurrentPlaylist>(addPtr);
+            }
+        }
+
+        public static void ClearCurrentPlaylist()
+        {
+            sOnClear?.Invoke();
         }
     }
 }

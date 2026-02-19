@@ -30,29 +30,72 @@ constexpr GUID extension_guid = {0x97ee6584, 0x7fb1, 0x48e9, {0xbf, 0xaa, 0xdc, 
 HWND wnd_fb2k{nullptr};
 typedef void(__stdcall* RegisterCallbacksFunc)(void*);
 
-// アクティブなプレイリストにファイルを追加
-void __stdcall AddFileToCurrentPlaylist(const wchar_t* path)
+    // アクティブなプレイリストに複数ファイルを追加 (パイプ '|' 区切りの文字列を受け取る)
+void __stdcall Host_AddFiles(const wchar_t* delimited_paths)
 {
-    if (!path)
+    if (!delimited_paths || wcslen(delimited_paths) == 0)
         return;
 
     static_api_ptr_t<playlist_manager> pm;
     t_size active = pm->get_active_playlist();
 
     if (active != pfc::infinite_size) {
-        // 文字列リストを作成
+        pfc::list_t<pfc::string8> location_strings;
         pfc::list_t<const char*> locations;
-        pfc::string8 path_utf8;
 
-        // wchar_t* (UTF-16) から UTF-8 に変換
-        path_utf8 = pfc::stringcvt::string_utf8_from_wide(path);
-        locations.add_item(path_utf8);
+        std::wstring paths(delimited_paths);
+        size_t start = 0;
+        size_t end = paths.find(L'|');
 
-        // ファイルを追加 (非同期で処理され、UIが固まりません)
-        // playlist_manager::get()->playlist_add_locations(...) が便利です
-        pm->playlist_add_locations(active, locations,
-            true, // select_added (追加した曲を選択状態にするか)
-            wnd_fb2k);
+        // パスを判定してリストに追加する処理（ラムダ式で共通化）
+        auto check_and_add = [&](const std::wstring& path_str) {
+            auto utf8_path = pfc::stringcvt::string_utf8_from_wide(path_str.c_str());
+
+            // 1. 音楽ファイルとして対応しているか判定 (.mp3, .flac, .dsf などインストール済みコンポーネントに依存)
+            bool is_supported = input_entry::g_is_supported_path(utf8_path);
+
+            // 2. プレイリストファイルとして対応しているか判定 (.cue, .m3u など)
+            //if (!is_supported) {
+            //    is_supported = playlist_loader::g_is_supported_path(utf8_path);
+            //}
+
+            // 対応している場合のみ追加
+            if (is_supported) {
+                location_strings.add_item(utf8_path);
+            }
+        };
+
+        // パイプ文字で分割しながら判定処理を実行
+        while (end != std::wstring::npos) {
+            check_and_add(paths.substr(start, end - start));
+            start = end + 1;
+            end = paths.find(L'|', start);
+        }
+        // 最後の1要素を処理
+        if (start < paths.length()) {
+            check_and_add(paths.substr(start));
+        }
+
+        // 1つ以上対応ファイルがあった場合のみ、プレイリストへの一括追加を実行
+        if (location_strings.get_count() > 0) {
+            for (t_size i = 0; i < location_strings.get_count(); ++i) {
+                locations.add_item(location_strings[i].get_ptr());
+            }
+            pm->playlist_add_locations(active, locations, true, wnd_fb2k);
+        }
+    }
+}
+
+// アクティブなプレイリストをクリア
+void __stdcall Host_ClearPlaylist()
+{
+    // メインスレッドからの呼び出しを想定
+    static_api_ptr_t<playlist_manager> pm;
+    t_size active = pm->get_active_playlist();
+
+    if (active != pfc::infinite_size) {
+        // undo_backup を true にすると、ユーザーが「元に戻す」を使えるようになります
+        pm->playlist_clear(active);
     }
 }
 
@@ -136,7 +179,13 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
             auto regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnAddFileToCurrentPlaylist");
             if (regFunc) {
                 // 作成した関数のアドレスを渡す
-                regFunc((void*)AddFileToCurrentPlaylist);
+                regFunc((void*)Host_AddFiles);
+            }
+
+            regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnClearCurrentPlaylist");
+            if (regFunc) {
+                // 作成した関数のアドレスを渡す
+                regFunc((void*)Host_ClearPlaylist);
             }
         }
         //wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,
