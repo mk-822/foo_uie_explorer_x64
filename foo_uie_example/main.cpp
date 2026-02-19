@@ -27,6 +27,35 @@ DECLARE_COMPONENT_VERSION("Example Columns UI Panel", "0.1", "compiled: " __DATE
  */
 constexpr GUID extension_guid = {0x97ee6584, 0x7fb1, 0x48e9, {0xbf, 0xaa, 0xdc, 0xf3, 0x2, 0x95, 0x9a, 0xcf}};
 
+HWND wnd_fb2k{nullptr};
+typedef void(__stdcall* RegisterCallbacksFunc)(void*);
+
+// アクティブなプレイリストにファイルを追加
+void __stdcall AddFileToCurrentPlaylist(const wchar_t* path)
+{
+    if (!path)
+        return;
+
+    static_api_ptr_t<playlist_manager> pm;
+    t_size active = pm->get_active_playlist();
+
+    if (active != pfc::infinite_size) {
+        // 文字列リストを作成
+        pfc::list_t<const char*> locations;
+        pfc::string8 path_utf8;
+
+        // wchar_t* (UTF-16) から UTF-8 に変換
+        path_utf8 = pfc::stringcvt::string_utf8_from_wide(path);
+        locations.add_item(path_utf8);
+
+        // ファイルを追加 (非同期で処理され、UIが固まりません)
+        // playlist_manager::get()->playlist_add_locations(...) が便利です
+        pm->playlist_add_locations(active, locations,
+            true, // select_added (追加した曲を選択状態にするか)
+            wnd_fb2k);
+    }
+}
+
 /** Our window class. */
 class ExampleWindow : public uie::container_ui_extension {
 public:
@@ -47,7 +76,7 @@ private:
 
     /** Our child window */
     HWND wnd_static{nullptr};
-    HMODULE dll;
+    HMODULE hDll;
 
     void LoadLibraryImpl()
     {
@@ -70,7 +99,7 @@ private:
         // ★重要: LOAD_WITH_ALTERED_SEARCH_PATH を使う
         // これを使わないと、MyExplorerLib.dll がさらに別の DLL に依存している場合、
         // foobar2000.exe の場所を探しに行ってしまい失敗することがあります。
-        dll = LoadLibraryEx(wide_path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
+        hDll = LoadLibraryEx(wide_path, nullptr, LOAD_WITH_ALTERED_SEARCH_PATH);
     }
 };
 
@@ -93,14 +122,21 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
         LoadLibraryImpl();
         RECT rc;
         GetClientRect(wnd, &rc);
+        wnd_fb2k = wnd;
 
         /** Create a static window, with text "Example". */
-        if (dll) {
-            auto method = GetProcAddress(dll, "Create");
+        if (hDll) {
+            auto method = GetProcAddress(hDll, "Create");
             // 3. C#の関数を呼ぶ
             if (method) {
                 wnd_static = (HWND)method();
                 SetParent(wnd_static, wnd);
+            }
+
+            auto regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnAddFileToCurrentPlaylist");
+            if (regFunc) {
+                // 作成した関数のアドレスを渡す
+                regFunc((void*)AddFileToCurrentPlaylist);
             }
         }
         //wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,
@@ -116,8 +152,8 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
         /** DefWindowProc will destroy our child window. Set our window handle to nullptr now. */
         wnd_static = nullptr;
 
-        if (dll) {
-            FreeLibrary(dll);
+        if (hDll) {
+            FreeLibrary(hDll);
         }
         break;
     default:

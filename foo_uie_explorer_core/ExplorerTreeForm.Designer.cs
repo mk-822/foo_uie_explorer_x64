@@ -28,44 +28,44 @@ namespace foo_uie_explorer_core
         /// </summary>
         private void InitializeComponent()
         {
-            TreeNode treeNode1 = new TreeNode("ノード3");
-            TreeNode treeNode2 = new TreeNode("ノード0", new TreeNode[] { treeNode1 });
-            TreeNode treeNode3 = new TreeNode("ノード2");
-            TreeNode treeNode4 = new TreeNode("ノード1", new TreeNode[] { treeNode3 });
-            treeView1 = new TreeView();
+            components = new System.ComponentModel.Container();
+            TreeNode treeNode1 = new TreeNode("Drive", 0, 0);
+            TreeNode treeNode2 = new TreeNode("Folder", 2, 2);
+            TreeNode treeNode3 = new TreeNode("Favorite", 1, 1);
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ExplorerTreeForm));
+            treeView_explorer = new TreeView();
             SuspendLayout();
             // 
-            // treeView1
+            // treeView_explorer
             // 
-            treeView1.Dock = DockStyle.Fill;
-            treeView1.Location = new Point(0, 0);
-            treeView1.Name = "treeView1";
-            treeNode1.Name = "ノード3";
-            treeNode1.Text = "ノード3";
-            treeNode2.Name = "ノード0";
-            treeNode2.Text = "ノード0";
-            treeNode3.Name = "ノード2";
-            treeNode3.Text = "ノード2";
-            treeNode4.Name = "ノード1";
-            treeNode4.Text = "ノード1";
-            treeView1.Nodes.AddRange(new TreeNode[] { treeNode2, treeNode4 });
-            treeView1.Size = new Size(800, 450);
-            treeView1.TabIndex = 0;
+            treeView_explorer.Dock = DockStyle.Fill;
+            treeView_explorer.ImageIndex = 0;
+            treeView_explorer.ItemHeight = 20;
+            treeView_explorer.Location = new Point(0, 0);
+            treeView_explorer.Name = "treeView_explorer";
+            treeView_explorer.SelectedImageIndex = 0;
+            treeView_explorer.Size = new Size(800, 450);
+            treeView_explorer.TabIndex = 0;
+            treeView_explorer.BeforeExpand += treeView_explorer_BeforeExpand;
+            treeView_explorer.AfterExpand += treeView_explorer_AfterExpand;
+            treeView_explorer.AfterCollapse += treeView_explorer_AfterCollapse;
+            treeView_explorer.NodeMouseDoubleClick += treeView_explorer_NodeMouseDoubleClick;
             // 
             // ExplorerTreeForm
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 450);
-            Controls.Add(treeView1);
+            Controls.Add(treeView_explorer);
             FormBorderStyle = FormBorderStyle.None;
             Name = "ExplorerTreeForm";
             Text = "ExplorerTreeForm";
+            Shown += ExplorerTreeForm_Shown;
             ResumeLayout(false);
         }
 
         #endregion
 
-        private TreeView treeView1;
+        private TreeView treeView_explorer;
     }
 }
