@@ -6,14 +6,6 @@ namespace foo_uie_explorer_core
     {
         public static ExplorerTreeForm sInstance = new(); // インスタンス保持用
 
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        public delegate void OnAddFileToCurrentPlaylist([MarshalAs(UnmanagedType.LPWStr)] string path);
-        public static OnAddFileToCurrentPlaylist? sOnAddFile = null;
-
-        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
-        public delegate void OnClearCurrentPlaylist();
-        public static OnClearCurrentPlaylist? sOnClear = null;
-
         [UnmanagedCallersOnly(EntryPoint = "Create")]
         public static IntPtr Create()
         {
@@ -21,33 +13,67 @@ namespace foo_uie_explorer_core
             return sInstance.Handle;
         }
 
+        [UnmanagedCallersOnly(EntryPoint = "SetDarkMode")]
+        public static void SetDarkMode(bool flag)
+        {
+            sInstance.SetDarkMode(flag);
+        }
+    }
 
-        [UnmanagedCallersOnly(EntryPoint = "SetOnAddFileToCurrentPlaylist")]
-        public static void SetOnAddFileToCurrentPlaylist(IntPtr addPtr)
+    public class FoobarBridge
+    {
+        //---------------------------------------------------------------------------------
+        // プレイリストにファイルを追加するためのデリゲートとメソッド
+        //---------------------------------------------------------------------------------
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void OnAddFiles([MarshalAs(UnmanagedType.LPWStr)] string path);
+        public static OnAddFiles? sOnAddFile = null;
+
+        [UnmanagedCallersOnly(EntryPoint = "SetOnAddFiles")]
+        public static void SetOnAddFiles(IntPtr addPtr)
         {
             if (addPtr != IntPtr.Zero)
             {
-                sOnAddFile = Marshal.GetDelegateForFunctionPointer<OnAddFileToCurrentPlaylist>(addPtr);
+                sOnAddFile = Marshal.GetDelegateForFunctionPointer<OnAddFiles>(addPtr);
             }
         }
 
-        public static void AddFileToCurrentPlaylist(string path)
-        {
-            sOnAddFile?.Invoke(path);
-        }
+        public static void AddFiles(string path) => sOnAddFile?.Invoke(path);
 
-        [UnmanagedCallersOnly(EntryPoint = "SetOnClearCurrentPlaylist")]
-        public static void SetOnClearCurrentPlaylist(IntPtr addPtr)
+        //---------------------------------------------------------------------------------
+        // プレイリストをクリアするためのデリゲートとメソッド
+        //---------------------------------------------------------------------------------
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void OnClear();
+        public static OnClear? sOnClear = null;
+
+        [UnmanagedCallersOnly(EntryPoint = "SetOnClear")]
+        public static void SetOnClear(IntPtr addPtr)
         {
             if (addPtr != IntPtr.Zero)
             {
-                sOnClear = Marshal.GetDelegateForFunctionPointer<OnClearCurrentPlaylist>(addPtr);
+                sOnClear = Marshal.GetDelegateForFunctionPointer<OnClear>(addPtr);
             }
         }
 
-        public static void ClearCurrentPlaylist()
+        public static void Clear() => sOnClear?.Invoke();
+
+        //---------------------------------------------------------------------------------
+        // フォルダを追加するためのデリゲートとメソッド
+        //---------------------------------------------------------------------------------
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate void OnAddFolder([MarshalAs(UnmanagedType.LPWStr)] string path);
+        public static OnAddFolder? sAddFolder = null;
+
+        [UnmanagedCallersOnly(EntryPoint = "SetOnAddFolder")]
+        public static void SetOnAddFolder(IntPtr addPtr)
         {
-            sOnClear?.Invoke();
+            if (addPtr != IntPtr.Zero)
+            {
+                sAddFolder = Marshal.GetDelegateForFunctionPointer<OnAddFolder>(addPtr);
+            }
         }
+
+        public static void AddFolder(string path) => sAddFolder?.Invoke(path);
     }
 }

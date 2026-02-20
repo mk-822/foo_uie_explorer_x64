@@ -29,6 +29,7 @@ constexpr GUID extension_guid = {0x97ee6584, 0x7fb1, 0x48e9, {0xbf, 0xaa, 0xdc, 
 
 HWND wnd_fb2k{nullptr};
 typedef void(__stdcall* RegisterCallbacksFunc)(void*);
+typedef void(__stdcall* SetBoolFunc)(bool);
 
     // アクティブなプレイリストに複数ファイルを追加 (パイプ '|' 区切りの文字列を受け取る)
 void __stdcall Host_AddFiles(const wchar_t* delimited_paths)
@@ -99,11 +100,29 @@ void __stdcall Host_ClearPlaylist()
     }
 }
 
+// アクティブなプレイリストにフォルダを追加 (再帰的に対応ファイルを検索して追加)
+void __stdcall Host_AddFolder(const wchar_t* path)
+{
+    if (!path)
+        return;
+    static_api_ptr_t<playlist_manager> pm;
+    t_size active = pm->get_active_playlist();
+
+    if (active != pfc::infinite_size) {
+        pfc::list_t<const char*> locations;
+        auto utf8_path = pfc::stringcvt::string_utf8_from_wide(path);
+        locations.add_item(utf8_path.get_ptr());
+
+        // true を渡すことで、foobar2000が自動で再帰検索し、サポート対象ファイルだけを追加します
+        pm->playlist_add_locations(active, locations, true, wnd_fb2k);
+    }
+}
+
 /** Our window class. */
 class ExampleWindow : public uie::container_ui_extension {
 public:
     const GUID& get_extension_guid() const override { return extension_guid; }
-    void get_name(pfc::string_base& out) const override { out = "ExplorerTree"; }
+    void get_name(pfc::string_base& out) const override { out = "Explorer Tree"; }
     void get_category(pfc::string_base& out) const override { out = "Panels"; }
     unsigned get_type() const override { return uie::type_panel; }
 
@@ -176,16 +195,25 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
                 SetParent(wnd_static, wnd);
             }
 
-            auto regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnAddFileToCurrentPlaylist");
+            auto regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnAddFiles");
             if (regFunc) {
-                // 作成した関数のアドレスを渡す
                 regFunc((void*)Host_AddFiles);
             }
 
-            regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnClearCurrentPlaylist");
+            regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnClear");
             if (regFunc) {
-                // 作成した関数のアドレスを渡す
                 regFunc((void*)Host_ClearPlaylist);
+            }
+
+            regFunc = (RegisterCallbacksFunc)GetProcAddress(hDll, "SetOnAddFolder");
+            if (regFunc) {
+                regFunc((void*)Host_AddFolder);
+            }
+
+            auto setDarkMode = (SetBoolFunc)GetProcAddress(hDll, "SetDarkMode");
+            if (setDarkMode) {
+                //auto colorHelper = cui::colours::helper();
+                //setDarkMode(colorHelper.is_dark_mode_active());
             }
         }
         //wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,

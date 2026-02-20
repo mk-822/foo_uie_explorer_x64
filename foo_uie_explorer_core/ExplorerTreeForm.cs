@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace foo_uie_explorer_core
@@ -13,6 +14,13 @@ namespace foo_uie_explorer_core
     {
         private ImageList imageList = new();
         private ContextMenuStrip contextMenuStrip = new();
+
+        // ツリーの開閉直後のダブルクリックを防止するためのタイムスタンプ
+        private DateTime _lastExpandCollapseTime = DateTime.MinValue;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetForegroundWindow(IntPtr hWnd);
 
         enum NodeType
         {
@@ -25,38 +33,55 @@ namespace foo_uie_explorer_core
         public ExplorerTreeForm()
         {
             InitializeComponent();
+
+            // 子ウィンドウとして動作させるための設定
+            TopLevel = false;
+            ShowInTaskbar = false;
+        }
+
+        public void SetDarkMode(bool flag)
+        {
+            if (flag)
+            {
+                BackColor = Color.FromArgb(30, 30, 30);
+                treeView_explorer.BackColor = Color.FromArgb(30, 30, 30);
+                treeView_explorer.ForeColor = Color.White;
+                contextMenuStrip.BackColor = Color.FromArgb(30, 30, 30);
+                contextMenuStrip.ForeColor = Color.White;
+            }
+            else
+            {
+                BackColor = SystemColors.Window;
+                treeView_explorer.BackColor = SystemColors.Window;
+                treeView_explorer.ForeColor = SystemColors.WindowText;
+                contextMenuStrip.BackColor = SystemColors.Window;
+                contextMenuStrip.ForeColor = SystemColors.WindowText;
+            }
         }
 
         private void ExplorerTreeForm_Shown(object sender, EventArgs e)
         {
-            // ImageListの初期設定
             imageList.ColorDepth = ColorDepth.Depth32Bit;
             imageList.ImageSize = new Size(16, 16);
 
-            // システムからアイコンをロードして追加
             imageList.Images.Add("folder_closed", SystemIconsExtractor.GetFolderIcon(false));
             imageList.Images.Add("folder_open", SystemIconsExtractor.GetFolderIcon(true));
-            imageList.Images.Add("drive", SystemIconsExtractor.GetDriveIcon("C:\\"));
             imageList.Images.Add("favorite", SystemIconsExtractor.GetFavoriteIcon());
+            // ※ドライブアイコンは動的に追加するためここには記述しません
 
             treeView_explorer.ImageList = imageList;
-
-            // 右クリック時にマウス直下のノードを選択状態にするイベントを登録
             treeView_explorer.MouseDown += treeView_explorer_MouseDown;
 
-            // コンテキストメニューの構築
             InitializeContextMenu();
-
-            // ルートノード（お気に入り＋ドライブ）の読み込み
             LoadRootNodes();
         }
 
-        // --- 右クリック時のノード選択処理 ---
-        private void treeView_explorer_MouseDown(object sender, MouseEventArgs e)
+        private void treeView_explorer_MouseDown(object? sender, MouseEventArgs e)
         {
+            // 右クリック時にノードを選択する
             if (e.Button == MouseButtons.Right)
             {
-                TreeNode clickedNode = treeView_explorer.GetNodeAt(e.X, e.Y);
+                TreeNode? clickedNode = treeView_explorer.GetNodeAt(e.X, e.Y);
                 if (clickedNode != null)
                 {
                     treeView_explorer.SelectedNode = clickedNode;
@@ -64,7 +89,6 @@ namespace foo_uie_explorer_core
             }
         }
 
-        // --- お気に入り保存ファイルのパス取得 ---
         private string GetFavoritesFilePath()
         {
             var module = Process.GetCurrentProcess().Modules
@@ -75,7 +99,25 @@ namespace foo_uie_explorer_core
             return Path.Combine(baseDir, "favorites.txt");
         }
 
-        // --- コンテキストメニューの初期化 ---
+        // CDDAや通常のパスをfoobar2000向けに変換するヘルパー
+        private string GetPathForFoobar(TreeNode node)
+        {
+            string path = node.Name;
+            if ((node.Tag as NodeType?) == NodeType.Drive)
+            {
+                try
+                {
+                    DriveInfo di = new DriveInfo(path);
+                    if (di.DriveType == DriveType.CDRom)
+                    {
+                        return "cdda://" + path.TrimEnd('\\');
+                    }
+                }
+                catch { }
+            }
+            return path;
+        }
+
         private void InitializeContextMenu()
         {
             var addFavItem = new ToolStripMenuItem("Add to Favorites");
@@ -110,16 +152,33 @@ namespace foo_uie_explorer_core
                     try
                     {
                         string[] files = Directory.GetFiles(treeView_explorer.SelectedNode.Name, "*.*", SearchOption.TopDirectoryOnly);
-
-                        // ファイルが存在する場合のみクリアと追加を実行
                         if (files.Length > 0)
                         {
                             string delimitedPaths = string.Join("|", files);
-                            ExplorerTree.ClearCurrentPlaylist();
-                            ExplorerTree.AddFileToCurrentPlaylist(delimitedPaths);
+                            FoobarBridge.Clear();
+                            FoobarBridge.AddFiles(delimitedPaths);
                         }
                     }
                     catch (UnauthorizedAccessException) { }
+                }
+            };
+
+            var addRecursiveMenuItem = new ToolStripMenuItem("Add All Tracks (Recursive)");
+            addRecursiveMenuItem.Click += (s, args) =>
+            {
+                if (treeView_explorer.SelectedNode != null)
+                {
+                    FoobarBridge.AddFolder(GetPathForFoobar(treeView_explorer.SelectedNode));
+                }
+            };
+
+            var clearAndAddRecursiveMenuItem = new ToolStripMenuItem("Clear and Add All Tracks (Recursive)");
+            clearAndAddRecursiveMenuItem.Click += (s, args) =>
+            {
+                if (treeView_explorer.SelectedNode != null)
+                {
+                    FoobarBridge.Clear();
+                    FoobarBridge.AddFolder(GetPathForFoobar(treeView_explorer.SelectedNode));
                 }
             };
 
@@ -127,19 +186,17 @@ namespace foo_uie_explorer_core
             refreshMenuItem.Click += (s, args) =>
             {
                 if (treeView_explorer.SelectedNode != null)
-                {
                     BuildChilds(treeView_explorer.SelectedNode);
-                }
                 else
-                {
                     LoadRootNodes();
-                }
             };
 
             contextMenuStrip.Items.Add(addFavItem);
             contextMenuStrip.Items.Add(removeFavItem);
             contextMenuStrip.Items.Add(new ToolStripSeparator());
             contextMenuStrip.Items.Add(clearAndAddMenuItem);
+            contextMenuStrip.Items.Add(addRecursiveMenuItem);
+            contextMenuStrip.Items.Add(clearAndAddRecursiveMenuItem);
             contextMenuStrip.Items.Add(new ToolStripSeparator());
             contextMenuStrip.Items.Add(refreshMenuItem);
 
@@ -148,24 +205,34 @@ namespace foo_uie_explorer_core
                 var node = treeView_explorer.SelectedNode;
                 if (node == null)
                 {
-                    addFavItem.Visible = false;
-                    removeFavItem.Visible = false;
-                    clearAndAddMenuItem.Visible = false;
+                    foreach (ToolStripItem item in contextMenuStrip.Items) item.Visible = false;
+                    refreshMenuItem.Visible = true;
                     return;
                 }
 
                 var type = node.Tag as NodeType?;
 
-                // 表示条件の設定
                 addFavItem.Visible = (type == NodeType.Drive || type == NodeType.Folder);
                 removeFavItem.Visible = (type == NodeType.Favorite);
-                clearAndAddMenuItem.Visible = (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
+
+                // CDROM等の判定
+                bool isDrive = type == NodeType.Drive;
+                bool isCdRom = false;
+                if (isDrive)
+                {
+                    try { isCdRom = new DriveInfo(node.Name).DriveType == DriveType.CDRom; } catch { }
+                }
+
+                // 階層を持たないCDROMの場合はNon-Recursive系のメニューを隠す
+                clearAndAddMenuItem.Visible = !isCdRom && (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
+
+                addRecursiveMenuItem.Visible = (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
+                clearAndAddRecursiveMenuItem.Visible = (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
             };
 
             treeView_explorer.ContextMenuStrip = contextMenuStrip;
         }
 
-        // --- ルートノード（お気に入り＋ドライブ）の構築 ---
         private void LoadRootNodes()
         {
             treeView_explorer.Nodes.Clear();
@@ -184,28 +251,31 @@ namespace foo_uie_explorer_core
             foreach (var drive in drives)
             {
                 var node = new TreeNode(drive) { Name = drive, Tag = NodeType.Drive };
-                node.ImageKey = node.SelectedImageKey = "drive";
-                treeView_explorer.Nodes.Add(node);
 
+                // ドライブ固有のアイコンを取得してImageListに登録
+                string iconKey = "drive_" + drive;
+                if (!imageList.Images.ContainsKey(iconKey))
+                {
+                    imageList.Images.Add(iconKey, SystemIconsExtractor.GetDriveIcon(drive));
+                }
+                node.ImageKey = node.SelectedImageKey = iconKey;
+
+                treeView_explorer.Nodes.Add(node);
                 CheckHasFolder(node);
             }
         }
 
-        // --- お気に入りノードの単体追加処理 ---
         private void AddFavoriteNode(string path)
         {
             string title = string.IsNullOrEmpty(Path.GetFileName(path)) ? path : Path.GetFileName(path);
-
             var node = new TreeNode(title) { Name = path, Tag = NodeType.Favorite };
             node.ImageKey = node.SelectedImageKey = "favorite";
 
             int insertIndex = treeView_explorer.Nodes.Cast<TreeNode>().Count(n => (n.Tag as NodeType?) == NodeType.Favorite);
             treeView_explorer.Nodes.Insert(insertIndex, node);
-
             CheckHasFolder(node);
         }
 
-        // --- お気に入りの保存 ---
         private void SaveFavorites()
         {
             var favNodes = treeView_explorer.Nodes.Cast<TreeNode>().Where(n => (n.Tag as NodeType?) == NodeType.Favorite);
@@ -216,7 +286,6 @@ namespace foo_uie_explorer_core
         private bool CheckHasFolder(TreeNode node)
         {
             if (node == null) return false;
-
             var path = node.Name;
             var tag = node.Tag as NodeType?;
 
@@ -231,54 +300,58 @@ namespace foo_uie_explorer_core
                     node.Nodes.Add(newNode);
                 }
             }
-            catch (UnauthorizedAccessException)
-            {
-                return false;
-            }
-
+            catch (UnauthorizedAccessException) { return false; }
             return true;
         }
 
         private void treeView_explorer_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
-            if (e.Node == null) return;
+            _lastExpandCollapseTime = DateTime.Now;
 
+            if (e.Node == null) return;
             if (e.Node.Nodes.Count == 1 && e.Node.Nodes[0].Tag is NodeType dummyType && dummyType == NodeType.Dummy)
             {
                 BuildChilds(e.Node);
             }
         }
 
+        private void treeView_explorer_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
+        {
+            // 閉じる際もダブルクリック防止タイマーを更新
+            _lastExpandCollapseTime = DateTime.Now;
+        }
+
         private void BuildChilds(TreeNode node)
         {
             var type = node.Tag as NodeType?;
             node.Nodes.Clear();
-
             var path = node.Name;
-            var dirs = Directory.GetDirectories(path);
 
-            foreach (var dir in dirs)
+            try
             {
-                var newNode = new TreeNode(Path.GetFileName(dir)) { Name = dir, Tag = NodeType.Folder };
-
-                if (type == NodeType.Folder || type == NodeType.Favorite || type == NodeType.Drive)
+                var dirs = Directory.GetDirectories(path);
+                foreach (var dir in dirs)
                 {
-                    newNode.ImageKey = newNode.SelectedImageKey = "folder_closed";
-                }
+                    var newNode = new TreeNode(Path.GetFileName(dir)) { Name = dir, Tag = NodeType.Folder };
 
-                node.Nodes.Add(newNode);
+                    if (type == NodeType.Folder || type == NodeType.Favorite || type == NodeType.Drive)
+                    {
+                        newNode.ImageKey = newNode.SelectedImageKey = "folder_closed";
+                    }
+                    node.Nodes.Add(newNode);
 
-                if (!CheckHasFolder(newNode))
-                {
-                    node.Nodes.Remove(newNode);
+                    if (!CheckHasFolder(newNode))
+                    {
+                        node.Nodes.Remove(newNode);
+                    }
                 }
             }
+            catch (UnauthorizedAccessException) { }
         }
 
         private void treeView_explorer_AfterExpand(object sender, TreeViewEventArgs e)
         {
             if (e.Node == null) return;
-
             var type = e.Node.Tag as NodeType?;
             if (type == NodeType.Folder)
                 e.Node.ImageKey = e.Node.SelectedImageKey = "folder_open";
@@ -287,7 +360,6 @@ namespace foo_uie_explorer_core
         private void treeView_explorer_AfterCollapse(object sender, TreeViewEventArgs e)
         {
             if (e.Node == null) return;
-
             var type = e.Node.Tag as NodeType?;
             if (type == NodeType.Folder)
                 e.Node.ImageKey = e.Node.SelectedImageKey = "folder_closed";
@@ -295,23 +367,35 @@ namespace foo_uie_explorer_core
 
         private void treeView_explorer_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
+            // 直前にツリーの開閉が行われていた場合はダブルクリックイベントを無視する
+            if ((DateTime.Now - _lastExpandCollapseTime).TotalMilliseconds < 300) return;
             if (e.Node == null) return;
 
             try
             {
-                string[] files = Directory.GetFiles(e.Node.Name, "*.*", SearchOption.TopDirectoryOnly);
+                string path = e.Node.Name;
 
+                // CDROM判定
+                if ((e.Node.Tag as NodeType?) == NodeType.Drive)
+                {
+                    DriveInfo di = new DriveInfo(path);
+                    if (di.DriveType == DriveType.CDRom)
+                    {
+                        // foobar2000のCDDAプロトコルとしてフォルダ追加APIに投げる
+                        FoobarBridge.AddFolder("cdda://" + path.TrimEnd('\\'));
+                        return;
+                    }
+                }
+
+                // 通常の直下ファイル追加処理
+                string[] files = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly);
                 if (files.Length > 0)
                 {
                     string delimitedPaths = string.Join("|", files);
-
-                    // 新しいAPIに差し替え
-                    ExplorerTree.AddFileToCurrentPlaylist(delimitedPaths);
+                    FoobarBridge.AddFiles(delimitedPaths);
                 }
             }
-            catch (UnauthorizedAccessException)
-            {
-            }
+            catch (UnauthorizedAccessException) { }
         }
     }
 }
