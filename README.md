@@ -1,22 +1,24 @@
 # foo_uie_explorer_x64
 
 An Explorer Tree Panel component for foobar2000 (v2.0+ x64) / Columns UI.
-foobar2000 (v2.0ˆÈ~ x64”Å) ‚Ì Columns UI Œü‚¯ƒGƒNƒXƒvƒ[ƒ‰[•—ƒcƒŠ[ƒpƒlƒ‹ƒRƒ“ƒ|[ƒlƒ“ƒg‚Å‚·B
+foobar2000 (v2.0ä»¥é™ x64ç‰ˆ) ã® Columns UI å‘ã‘ã‚¨ã‚¯ã‚¹ãƒ—ãƒ­ãƒ¼ãƒ©ãƒ¼é¢¨ãƒ„ãƒªãƒ¼ãƒ‘ãƒãƒ«ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆã§ã™ã€‚
 
-## Features / ‹@”\
+![Screenshot](https://github.com/user-attachments/assets/4c90e953-00c8-4a70-b31e-2154e84b6d9e)
 
-* **Native OS UI**: Built with C# (.NET 10 NativeAOT) and WinForms for a native Windows Explorer look and feel. / C# ‚Æ WinForms ‚ğ—˜—p‚µAWindows •W€‚ÌƒGƒNƒXƒvƒ[ƒ‰[‚É‹ß‚¢‘€ìŠ´‚ğÀŒ»B
-* **Smart Filtering**: Automatically filters and adds only supported audio and playlist files when adding entire folders. / ƒtƒHƒ‹ƒ_’Ç‰ÁAfoobar2000‚ªƒTƒ|[ƒg‚µ‚Ä‚¢‚é‰¹ºƒtƒ@ƒCƒ‹‚âƒvƒŒƒCƒŠƒXƒg‚Ì‚İ‚ğ©“®“I‚É”»•Ê‚µ‚ÄƒvƒŒƒCƒŠƒXƒg‚É’Ç‰ÁB
-* **Favorites System**: Right-click to add frequently used folders to the top "Favorites" section. / ‚æ‚­g‚¤ƒtƒHƒ‹ƒ_‚ğ‰EƒNƒŠƒbƒN‚©‚çu‚¨‹C‚É“ü‚èv‚Æ‚µ‚ÄÅã•”‚É’Ç‰Á‰Â”\B
-* **Clear & Add**: Context menu option to clear the current playlist and instantly load selected tracks. / ƒRƒ“ƒeƒLƒXƒgƒƒjƒ…[‚©‚çuŒ»İ‚ÌƒvƒŒƒCƒŠƒXƒg‚ğƒNƒŠƒA‚µ‚Ä’Ç‰Áv‚ª‰Â”\B
+## Features / æ©Ÿèƒ½
 
-## Requirements / “®ìŠÂ‹«
+* **Native OS UI**: Built with C# (.NET 10 NativeAOT) and WinForms for a native Windows Explorer look and feel. / C# ã¨ WinForms ã‚’åˆ©ç”¨ã—ã€Windows æ¨™æº–ã®ã‚¨ã‚¯ã‚¹ãƒ—ãƒ­ãƒ¼ãƒ©ãƒ¼ã«è¿‘ã„æ“ä½œæ„Ÿã‚’å®Ÿç¾ã€‚
+* **Smart Filtering**: Automatically filters and adds only supported audio and playlist files when adding entire folders. / ãƒ•ã‚©ãƒ«ãƒ€è¿½åŠ æ™‚ã€foobar2000ãŒã‚µãƒãƒ¼ãƒˆã—ã¦ã„ã‚‹éŸ³å£°ãƒ•ã‚¡ã‚¤ãƒ«ã‚„ãƒ—ãƒ¬ã‚¤ãƒªã‚¹ãƒˆã®ã¿ã‚’è‡ªå‹•çš„ã«åˆ¤åˆ¥ã—ã¦ãƒ—ãƒ¬ã‚¤ãƒªã‚¹ãƒˆã«è¿½åŠ ã€‚
+* **Favorites System**: Right-click to add frequently used folders to the top "Favorites" section. / ã‚ˆãä½¿ã†ãƒ•ã‚©ãƒ«ãƒ€ã‚’å³ã‚¯ãƒªãƒƒã‚¯ã‹ã‚‰ã€ŒãŠæ°—ã«å…¥ã‚Šã€ã¨ã—ã¦æœ€ä¸Šéƒ¨ã«è¿½åŠ å¯èƒ½ã€‚
+* **Clear & Add**: Context menu option to clear the current playlist and instantly load selected tracks. / ã‚³ãƒ³ãƒ†ã‚­ã‚¹ãƒˆãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‹ã‚‰ã€Œç¾åœ¨ã®ãƒ—ãƒ¬ã‚¤ãƒªã‚¹ãƒˆã‚’ã‚¯ãƒªã‚¢ã—ã¦è¿½åŠ ã€ãŒå¯èƒ½ã€‚
+
+## Requirements / å‹•ä½œç’°å¢ƒ
 
 * **OS**: Windows 10 / 11 (64-bit)
 * **foobar2000**: v2.0 or newer (x64 version)
 * **Columns UI**: v2.0.0 or newer
 
-## Installation / ƒCƒ“ƒXƒg[ƒ‹•û–@
+## Installation / ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«æ–¹æ³•
 
 1. Download the latest `foo_uie_explorer_x64.zip` from the [binary](../../tree/main/binary) folder.
 2. Open foobar2000 and go to **File > Preferences > Components**.
@@ -24,17 +26,17 @@ foobar2000 (v2.0ˆÈ~ x64”Å) ‚Ì Columns UI Œü‚¯ƒGƒNƒXƒvƒ[ƒ‰[•—ƒcƒŠ[ƒpƒlƒ‹ƒRƒ“
 4. Click **Apply** and restart foobar2000.
 5. Go to **Preferences > Display > Columns UI > Layout**, right-click on a splitter, select **Insert panel > Panels > Explorer Tree**, and apply.
 
-**(“ú–{Œê)**
-1. `binary` ƒtƒHƒ‹ƒ_‚©‚çÅV‚Ì `foo_uie_explorer_x64.zip` ‚ğƒ_ƒEƒ“ƒ[ƒh‚µ‚Ü‚·B
-2. foobar2000 ‚ğŠJ‚«A**File > Preferences > Components** ‚ğŠJ‚«‚Ü‚·B
-3. ƒ_ƒEƒ“ƒ[ƒh‚µ‚½ `.zip` ƒtƒ@ƒCƒ‹‚ğƒRƒ“ƒ|[ƒlƒ“ƒgˆê——‚Ì—Ìˆæ‚Éƒhƒ‰ƒbƒO•ƒhƒƒbƒv‚µ‚Ü‚·B
-4. **Apply** ‚ğƒNƒŠƒbƒN‚µAfoobar2000 ‚ğÄ‹N“®‚µ‚Ü‚·B
-5. **Preferences > Display > Columns UI > Layout** ‚ÉˆÚ“®‚µAƒXƒvƒŠƒbƒ^[‚ğ‰EƒNƒŠƒbƒN‚µ‚Ä **Insert panel > Panels > Explorer Tree** ‚ğ’Ç‰Á‚µ‚Ä‚­‚¾‚³‚¢B
+**(æ—¥æœ¬èª)**
+1. `binary` ãƒ•ã‚©ãƒ«ãƒ€ã‹ã‚‰æœ€æ–°ã® `foo_uie_explorer_x64.zip` ã‚’ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ã¾ã™ã€‚
+2. foobar2000 ã‚’é–‹ãã€**File > Preferences > Components** ã‚’é–‹ãã¾ã™ã€‚
+3. ãƒ€ã‚¦ãƒ³ãƒ­ãƒ¼ãƒ‰ã—ãŸ `.zip` ãƒ•ã‚¡ã‚¤ãƒ«ã‚’ã‚³ãƒ³ãƒãƒ¼ãƒãƒ³ãƒˆä¸€è¦§ã®é ˜åŸŸã«ãƒ‰ãƒ©ãƒƒã‚°ï¼†ãƒ‰ãƒ­ãƒƒãƒ—ã—ã¾ã™ã€‚
+4. **Apply** ã‚’ã‚¯ãƒªãƒƒã‚¯ã—ã€foobar2000 ã‚’å†èµ·å‹•ã—ã¾ã™ã€‚
+5. **Preferences > Display > Columns UI > Layout** ã«ç§»å‹•ã—ã€ã‚¹ãƒ—ãƒªãƒƒã‚¿ãƒ¼ã‚’å³ã‚¯ãƒªãƒƒã‚¯ã—ã¦ **Insert panel > Panels > Explorer Tree** ã‚’è¿½åŠ ã—ã¦ãã ã•ã„ã€‚
 
-## Building from Source / ƒrƒ‹ƒh•û–@
+## Building from Source / ãƒ“ãƒ«ãƒ‰æ–¹æ³•
 
 This project uses a hybrid architecture consisting of a C++ host and a C# NativeAOT UI.
-‚±‚ÌƒvƒƒWƒFƒNƒg‚Í C++ ‚ÌƒzƒXƒg‚Æ C# ‚Ì NativeAOT ‚ğ—˜—p‚µ‚½ƒnƒCƒuƒŠƒbƒh\¬‚Å‚·B
+ã“ã®ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã¯ C++ ã®ãƒ›ã‚¹ãƒˆã¨ C# ã® NativeAOT ã‚’åˆ©ç”¨ã—ãŸãƒã‚¤ãƒ–ãƒªãƒƒãƒ‰æ§‹æˆã§ã™ã€‚
 
 ### Prerequisites
 * Visual Studio 2026 (or compatible) with "Desktop development with C++" and ".NET desktop development" workloads.
