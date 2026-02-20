@@ -49,6 +49,9 @@
       <Filter>CUI</Filter>
     </ClInclude>
     <ClInclude Include="..\columns_ui-sdk\ui_extension.h" />
+    <ClInclude Include="colours.h">
+      <Filter>CUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\columns_ui-sdk\win32_helpers.cpp">
@@ -61,5 +64,8 @@
       <Filter>CUI</Filter>
     </ClCompile>
     <ClCompile Include="..\columns_ui-sdk\ui_extension.cpp" />
+    <ClCompile Include="colours.cpp">
+      <Filter>CUI</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

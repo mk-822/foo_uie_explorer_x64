@@ -189,6 +189,7 @@
     <ClInclude Include="..\columns_ui-sdk\columns_ui.h" />
     <ClInclude Include="..\columns_ui-sdk\columns_ui_appearance.h" />
     <ClInclude Include="..\columns_ui-sdk\ui_extension.h" />
+    <ClInclude Include="colours.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\columns_ui-sdk\win32_helpers.cpp" />
@@ -200,6 +201,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="colours.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

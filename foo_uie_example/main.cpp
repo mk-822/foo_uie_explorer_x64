@@ -212,8 +212,8 @@ LRESULT ExampleWindow::on_message(HWND wnd, UINT msg, WPARAM wp, LPARAM lp)
 
             auto setDarkMode = (SetBoolFunc)GetProcAddress(hDll, "SetDarkMode");
             if (setDarkMode) {
-                //auto colorHelper = cui::colours::helper();
-                //setDarkMode(colorHelper.is_dark_mode_active());
+                auto colorHelper = cui::colours::helper();
+                setDarkMode(colorHelper.is_dark_mode_active());
             }
         }
         //wnd_static = CreateWindowEx(0, WC_STATIC, _T("Example panel"), WS_CHILD | WS_VISIBLE, 0, 0, rc.right, rc.bottom,

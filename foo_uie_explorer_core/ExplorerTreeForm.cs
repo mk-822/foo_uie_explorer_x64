@@ -34,6 +34,8 @@ namespace foo_uie_explorer_core
         {
             InitializeComponent();
 
+            treeView_explorer.BorderStyle = BorderStyle.None;
+
             // 子ウィンドウとして動作させるための設定
             TopLevel = false;
             ShowInTaskbar = false;
