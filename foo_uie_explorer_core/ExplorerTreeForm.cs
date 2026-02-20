@@ -122,6 +122,28 @@ namespace foo_uie_explorer_core
 
         private void InitializeContextMenu()
         {
+            var showInExplorer = new ToolStripMenuItem("Show in Explorer");
+            showInExplorer.Click += (s, args) =>
+            {
+                if (treeView_explorer.SelectedNode != null)
+                {
+                    string path = treeView_explorer.SelectedNode.Name;
+                    if (Directory.Exists(path) || File.Exists(path))
+                    {
+                        try
+                        {
+                            Process.Start(new ProcessStartInfo
+                            {
+                                FileName = path,
+                                UseShellExecute = true,
+                                Verb = "open"
+                            });
+                        }
+                        catch { }
+                    }
+                }
+            };
+
             var addFavItem = new ToolStripMenuItem("Add to Favorites");
             addFavItem.Click += (s, args) =>
             {
@@ -193,6 +215,8 @@ namespace foo_uie_explorer_core
                     LoadRootNodes();
             };
 
+            contextMenuStrip.Items.Add(showInExplorer);
+            contextMenuStrip.Items.Add(new ToolStripSeparator());
             contextMenuStrip.Items.Add(addFavItem);
             contextMenuStrip.Items.Add(removeFavItem);
             contextMenuStrip.Items.Add(new ToolStripSeparator());
