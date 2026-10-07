@@ -40,7 +40,6 @@ namespace foo_uie_explorer_core
             // 
             treeView_explorer.Dock = DockStyle.Fill;
             treeView_explorer.ImageIndex = 0;
-            treeView_explorer.ItemHeight = 20;
             treeView_explorer.Location = new Point(0, 0);
             treeView_explorer.Name = "treeView_explorer";
             treeView_explorer.SelectedImageIndex = 0;
