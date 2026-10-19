@@ -14,7 +14,4 @@
   <Target Name="PostBuildPublish" AfterTargets="Build">
     <Exec Command="dotnet publish &quot;$(ProjectPath)&quot; -c $(Configuration) -r win-x64 --no-build -o &quot;$(SolutionDir)bin\NativeOutput\$(Configuration)&quot;" />
   </Target>
-  <ItemGroup>
-    <PackageReference Include="runtime.win-x64.Microsoft.DotNet.ILCompiler" Version="10.0.3" />
-  </ItemGroup>
 </Project>

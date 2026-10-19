@@ -12,6 +12,11 @@ foobar2000 (v2.0以降 x64版) の Columns UI 向けエクスプローラー風�
 * **Favorites System**: Right-click to add frequently used folders to the top "Favorites" section. / よく使うフォルダを右クリックから「お気に入り」として最上部に追加可能。
 * **Clear & Add**: Context menu option to clear the current playlist and instantly load selected tracks. / コンテキストメニューから「現在のプレイリストをクリアして追加」が可能。
 
+* **Remember expanded folders**: Restores the tree expansion state after restart, including separate states for favorites and drives. / ツリーの展開状態を保存し、再起動時に復元します。お気に入りとドライブの状態は個別に保持します。
+* **Configurable double-click**: Right-click the tree and choose **Config...** to select **Clear and Add All Tracks**, **Add All Tracks**, or either recursive variant. The default is **Add All Tracks** (current folder only). Use the plus/minus buttons to expand or collapse folders. / 右クリックの **Config...** から、ダブルクリック時の「クリアして全曲追加／全曲追加」と、それぞれの再帰版を選択できます。初期値は直下の全曲追加です。ツリーの開閉には＋／－を使います。
+
+Expansion and double-click settings are saved in `explorer-settings.txt` beside `favorites.txt` in the component folder. / 展開状態とダブルクリック設定は、コンポーネントフォルダの `favorites.txt` と同じ場所にある `explorer-settings.txt` に保存されます。
+
 ## Requirements / 動作環境
 
 * **OS**: Windows 10 / 11 (64-bit)

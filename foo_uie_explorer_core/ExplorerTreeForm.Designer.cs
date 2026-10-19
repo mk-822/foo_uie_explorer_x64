@@ -33,7 +33,7 @@ namespace foo_uie_explorer_core
             TreeNode treeNode2 = new TreeNode("Folder", 2, 2);
             TreeNode treeNode3 = new TreeNode("Favorite", 1, 1);
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(ExplorerTreeForm));
-            treeView_explorer = new TreeView();
+            treeView_explorer = new ExplorerTreeView();
             SuspendLayout();
             // 
             // treeView_explorer

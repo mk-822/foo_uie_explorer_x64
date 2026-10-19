@@ -15,8 +15,16 @@ namespace foo_uie_explorer_core
         private ImageList imageList = new();
         private ContextMenuStrip contextMenuStrip = new();
 
-        // ツリーの開閉直後のダブルクリックを防止するためのタイムスタンプ
-        private DateTime _lastExpandCollapseTime = DateTime.MinValue;
+        private DoubleClickAction doubleClickAction = DoubleClickAction.Add;
+        private bool restoringTree;
+        private readonly HashSet<string> expandedNodes = new(StringComparer.OrdinalIgnoreCase);
+
+        private enum DoubleClickAction { ClearAndAdd, Add, ClearAndAddRecursive, AddRecursive }
+        private static readonly string[] ActionNames =
+        {
+            "Clear and Add All Tracks", "Add All Tracks",
+            "Clear and Add All Tracks (Recursive)", "Add All Tracks (Recursive)"
+        };
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -76,6 +84,7 @@ namespace foo_uie_explorer_core
             treeView_explorer.MouseDown += treeView_explorer_MouseDown;
 
             InitializeContextMenu();
+            LoadSettings();
             LoadRootNodes();
         }
 
@@ -109,6 +118,106 @@ namespace foo_uie_explorer_core
 
             string baseDir = module != null ? Path.GetDirectoryName(module.FileName)! : AppContext.BaseDirectory;
             return Path.Combine(baseDir, "favorites.txt");
+        }
+
+        private string SettingsPath => Path.Combine(Path.GetDirectoryName(GetFavoritesFilePath())!, "explorer-settings.txt");
+
+        private void LoadSettings()
+        {
+            try
+            {
+                if (!File.Exists(SettingsPath)) return;
+                var lines = File.ReadAllLines(SettingsPath);
+                if (lines.Length > 0 && int.TryParse(lines[0], out int action) && action >= 0 && action < ActionNames.Length)
+                    doubleClickAction = (DoubleClickAction)action;
+                expandedNodes.UnionWith(lines.Skip(1));
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private string NodeKey(TreeNode node)
+        {
+            var root = node;
+            while (root.Parent != null) root = root.Parent;
+            // Favorites and drives can contain the same path, with independent expansion states.
+            return root.Tag + "|" + root.Name + "|" + node.Name;
+        }
+
+        private void SaveSettings()
+        {
+            if (restoringTree) return;
+            try
+            {
+                string path = SettingsPath;
+                File.WriteAllLines(path + ".tmp", new[] { ((int)doubleClickAction).ToString() }.Concat(expandedNodes.OrderBy(p => p, StringComparer.OrdinalIgnoreCase)));
+                File.Move(path + ".tmp", path, true);
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
+        }
+
+        private void RestoreExpansion(TreeNodeCollection nodes)
+        {
+            foreach (TreeNode node in nodes)
+            {
+                string key = NodeKey(node);
+                bool expand = expandedNodes.Contains(key);
+                bool hasExpandedDescendant = expandedNodes.Any(p => p.StartsWith(key.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase));
+                if (!expand && !hasExpandedDescendant) continue;
+                BuildChilds(node);
+                RestoreExpansion(node.Nodes);
+                if (expand) node.Expand();
+            }
+        }
+
+        private void ShowConfig()
+        {
+            using var dialog = new Form
+            {
+                Text = "Explorer Tree Config", FormBorderStyle = FormBorderStyle.FixedDialog,
+                StartPosition = FormStartPosition.CenterParent, ClientSize = new Size(400, 130),
+                MinimizeBox = false, MaximizeBox = false, ShowInTaskbar = false
+            };
+            var label = new Label { Text = "Double-click action:", AutoSize = true, Location = new Point(12, 15) };
+            var actions = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Location = new Point(12, 38), Width = 376 };
+            actions.Items.AddRange(ActionNames);
+            actions.SelectedIndex = (int)doubleClickAction;
+            var ok = new Button { Text = "OK", DialogResult = DialogResult.OK, Location = new Point(222, 88) };
+            var cancel = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(307, 88) };
+            dialog.Controls.AddRange(new Control[] { label, actions, ok, cancel });
+            dialog.AcceptButton = ok;
+            dialog.CancelButton = cancel;
+            if (dialog.ShowDialog(this) == DialogResult.OK)
+            {
+                doubleClickAction = (DoubleClickAction)actions.SelectedIndex;
+                SaveSettings();
+            }
+        }
+
+        private void ExecuteTrackAction(TreeNode node, DoubleClickAction action)
+        {
+            if (node.Tag is not NodeType type || type == NodeType.Dummy) return;
+            try
+            {
+                bool clear = action == DoubleClickAction.ClearAndAdd || action == DoubleClickAction.ClearAndAddRecursive;
+                bool recursive = action == DoubleClickAction.ClearAndAddRecursive || action == DoubleClickAction.AddRecursive;
+                string path = GetPathForFoobar(node);
+                if (recursive || path.StartsWith("cdda://", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (clear) FoobarBridge.Clear();
+                    FoobarBridge.AddFolder(path);
+                }
+                else
+                {
+                    string[] files = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly);
+                    if (files.Length == 0) return;
+                    if (clear) FoobarBridge.Clear();
+                    FoobarBridge.AddFiles(string.Join("|", files));
+                }
+            }
+            catch (IOException) { }
+            catch (UnauthorizedAccessException) { }
         }
 
         // CDDAや通常のパスをfoobar2000向けに変換するヘルパー
@@ -173,54 +282,40 @@ namespace foo_uie_explorer_core
             {
                 if (treeView_explorer.SelectedNode != null && (treeView_explorer.SelectedNode.Tag as NodeType?) == NodeType.Favorite)
                 {
+                    string key = NodeKey(treeView_explorer.SelectedNode);
+                    expandedNodes.RemoveWhere(p => p.Equals(key, StringComparison.OrdinalIgnoreCase) || p.StartsWith(key.TrimEnd('\\') + "\\", StringComparison.OrdinalIgnoreCase));
                     treeView_explorer.Nodes.Remove(treeView_explorer.SelectedNode);
+                    SaveSettings();
                     SaveFavorites();
                 }
             };
 
-            var clearAndAddMenuItem = new ToolStripMenuItem("Clear and Add All Tracks");
-            clearAndAddMenuItem.Click += (s, args) =>
-            {
-                if (treeView_explorer.SelectedNode != null)
-                {
-                    try
-                    {
-                        string[] files = Directory.GetFiles(treeView_explorer.SelectedNode.Name, "*.*", SearchOption.TopDirectoryOnly);
-                        if (files.Length > 0)
-                        {
-                            string delimitedPaths = string.Join("|", files);
-                            FoobarBridge.Clear();
-                            FoobarBridge.AddFiles(delimitedPaths);
-                        }
-                    }
-                    catch (UnauthorizedAccessException) { }
-                }
-            };
-
-            var addRecursiveMenuItem = new ToolStripMenuItem("Add All Tracks (Recursive)");
-            addRecursiveMenuItem.Click += (s, args) =>
-            {
-                if (treeView_explorer.SelectedNode != null)
-                {
-                    FoobarBridge.AddFolder(GetPathForFoobar(treeView_explorer.SelectedNode));
-                }
-            };
-
-            var clearAndAddRecursiveMenuItem = new ToolStripMenuItem("Clear and Add All Tracks (Recursive)");
-            clearAndAddRecursiveMenuItem.Click += (s, args) =>
-            {
-                if (treeView_explorer.SelectedNode != null)
-                {
-                    FoobarBridge.Clear();
-                    FoobarBridge.AddFolder(GetPathForFoobar(treeView_explorer.SelectedNode));
-                }
-            };
+            var clearAndAddMenuItem = new ToolStripMenuItem(ActionNames[0]);
+            clearAndAddMenuItem.Click += (s, args) => RunSelectedAction(DoubleClickAction.ClearAndAdd);
+            var addMenuItem = new ToolStripMenuItem(ActionNames[1]);
+            addMenuItem.Click += (s, args) => RunSelectedAction(DoubleClickAction.Add);
+            var clearAndAddRecursiveMenuItem = new ToolStripMenuItem(ActionNames[2]);
+            clearAndAddRecursiveMenuItem.Click += (s, args) => RunSelectedAction(DoubleClickAction.ClearAndAddRecursive);
+            var addRecursiveMenuItem = new ToolStripMenuItem(ActionNames[3]);
+            addRecursiveMenuItem.Click += (s, args) => RunSelectedAction(DoubleClickAction.AddRecursive);
+            var configMenuItem = new ToolStripMenuItem("Config...");
+            configMenuItem.Click += (s, args) => ShowConfig();
 
             var refreshMenuItem = new ToolStripMenuItem("Refresh");
             refreshMenuItem.Click += (s, args) =>
             {
                 if (treeView_explorer.SelectedNode != null)
-                    BuildChilds(treeView_explorer.SelectedNode);
+                {
+                    restoringTree = true;
+                    try
+                    {
+                        var node = treeView_explorer.SelectedNode;
+                        BuildChilds(node);
+                        RestoreExpansion(node.Nodes);
+                        if (expandedNodes.Contains(NodeKey(node))) node.Expand();
+                    }
+                    finally { restoringTree = false; }
+                }
                 else
                     LoadRootNodes();
             };
@@ -231,18 +326,22 @@ namespace foo_uie_explorer_core
             contextMenuStrip.Items.Add(removeFavItem);
             contextMenuStrip.Items.Add(new ToolStripSeparator());
             contextMenuStrip.Items.Add(clearAndAddMenuItem);
+            contextMenuStrip.Items.Add(addMenuItem);
             contextMenuStrip.Items.Add(addRecursiveMenuItem);
             contextMenuStrip.Items.Add(clearAndAddRecursiveMenuItem);
             contextMenuStrip.Items.Add(new ToolStripSeparator());
             contextMenuStrip.Items.Add(refreshMenuItem);
+            contextMenuStrip.Items.Add(configMenuItem);
 
             contextMenuStrip.Opening += (s, args) =>
             {
+                foreach (ToolStripItem item in contextMenuStrip.Items) item.Visible = true;
                 var node = treeView_explorer.SelectedNode;
                 if (node == null)
                 {
                     foreach (ToolStripItem item in contextMenuStrip.Items) item.Visible = false;
                     refreshMenuItem.Visible = true;
+                    configMenuItem.Visible = true;
                     return;
                 }
 
@@ -262,6 +361,7 @@ namespace foo_uie_explorer_core
                 // 階層を持たないCDROMの場合はNon-Recursive系のメニューを隠す
                 clearAndAddMenuItem.Visible = !isCdRom && (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
 
+                addMenuItem.Visible = clearAndAddMenuItem.Visible;
                 addRecursiveMenuItem.Visible = (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
                 clearAndAddRecursiveMenuItem.Visible = (type == NodeType.Drive || type == NodeType.Folder || type == NodeType.Favorite);
             };
@@ -271,33 +371,44 @@ namespace foo_uie_explorer_core
 
         private void LoadRootNodes()
         {
-            treeView_explorer.Nodes.Clear();
-
-            string favPath = GetFavoritesFilePath();
-            if (File.Exists(favPath))
+            restoringTree = true;
+            treeView_explorer.BeginUpdate();
+            try
             {
-                var savedPaths = File.ReadAllLines(favPath).Where(p => Directory.Exists(p));
-                foreach (var path in savedPaths)
+                treeView_explorer.Nodes.Clear();
+
+                string favPath = GetFavoritesFilePath();
+                if (File.Exists(favPath))
                 {
-                    AddFavoriteNode(path);
+                    var savedPaths = File.ReadAllLines(favPath).Where(p => Directory.Exists(p));
+                    foreach (var path in savedPaths)
+                    {
+                        AddFavoriteNode(path);
+                    }
                 }
+
+                var drives = Environment.GetLogicalDrives();
+                foreach (var drive in drives)
+                {
+                    var node = new TreeNode(drive) { Name = drive, Tag = NodeType.Drive };
+
+                    // ドライブ固有のアイコンを取得してImageListに登録
+                    string iconKey = "drive_" + drive;
+                    if (!imageList.Images.ContainsKey(iconKey))
+                    {
+                        imageList.Images.Add(iconKey, SystemIconsExtractor.GetDriveIcon(drive));
+                    }
+                    node.ImageKey = node.SelectedImageKey = iconKey;
+
+                    treeView_explorer.Nodes.Add(node);
+                    CheckHasFolder(node);
+                }
+                RestoreExpansion(treeView_explorer.Nodes);
             }
-
-            var drives = Environment.GetLogicalDrives();
-            foreach (var drive in drives)
+            finally
             {
-                var node = new TreeNode(drive) { Name = drive, Tag = NodeType.Drive };
-
-                // ドライブ固有のアイコンを取得してImageListに登録
-                string iconKey = "drive_" + drive;
-                if (!imageList.Images.ContainsKey(iconKey))
-                {
-                    imageList.Images.Add(iconKey, SystemIconsExtractor.GetDriveIcon(drive));
-                }
-                node.ImageKey = node.SelectedImageKey = iconKey;
-
-                treeView_explorer.Nodes.Add(node);
-                CheckHasFolder(node);
+                treeView_explorer.EndUpdate();
+                restoringTree = false;
             }
         }
 
@@ -346,19 +457,11 @@ namespace foo_uie_explorer_core
 
         private void treeView_explorer_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
-            _lastExpandCollapseTime = DateTime.Now;
-
             if (e.Node == null) return;
             if (e.Node.Nodes.Count == 1 && e.Node.Nodes[0].Tag is NodeType dummyType && dummyType == NodeType.Dummy)
             {
                 BuildChilds(e.Node);
             }
-        }
-
-        private void treeView_explorer_BeforeCollapse(object sender, TreeViewCancelEventArgs e)
-        {
-            // 閉じる際もダブルクリック防止タイマーを更新
-            _lastExpandCollapseTime = DateTime.Now;
         }
 
         private void BuildChilds(TreeNode node)
@@ -399,6 +502,11 @@ namespace foo_uie_explorer_core
             var type = e.Node.Tag as NodeType?;
             if (type == NodeType.Folder)
                 e.Node.ImageKey = e.Node.SelectedImageKey = "folder_open";
+            if (!restoringTree)
+            {
+                expandedNodes.Add(NodeKey(e.Node));
+                SaveSettings();
+            }
         }
 
         private void treeView_explorer_AfterCollapse(object sender, TreeViewEventArgs e)
@@ -407,39 +515,45 @@ namespace foo_uie_explorer_core
             var type = e.Node.Tag as NodeType?;
             if (type == NodeType.Folder)
                 e.Node.ImageKey = e.Node.SelectedImageKey = "folder_closed";
+            if (!restoringTree)
+            {
+                expandedNodes.Remove(NodeKey(e.Node));
+                SaveSettings();
+            }
+        }
+
+        private void RunSelectedAction(DoubleClickAction action)
+        {
+            if (treeView_explorer.SelectedNode is TreeNode node) ExecuteTrackAction(node, action);
         }
 
         private void treeView_explorer_NodeMouseDoubleClick(object sender, TreeNodeMouseClickEventArgs e)
         {
-            // 直前にツリーの開閉が行われていた場合はダブルクリックイベントを無視する
-            if ((DateTime.Now - _lastExpandCollapseTime).TotalMilliseconds < 300) return;
-            if (e.Node == null) return;
+            if (e.Button == MouseButtons.Left && e.Node != null) ExecuteTrackAction(e.Node, doubleClickAction);
+        }
+    }
 
-            try
+    // Native TreeView toggles folders before raising its double-click event.
+    // Handle label/icon double-clicks directly so playlist actions do not also toggle the tree.
+    internal sealed class ExplorerTreeView : TreeView
+    {
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_LBUTTONDBLCLK = 0x0203;
+            if (m.Msg == WM_LBUTTONDBLCLK)
             {
-                string path = e.Node.Name;
-
-                // CDROM判定
-                if ((e.Node.Tag as NodeType?) == NodeType.Drive)
+                int x = unchecked((short)(m.LParam.ToInt64() & 0xffff));
+                int y = unchecked((short)((m.LParam.ToInt64() >> 16) & 0xffff));
+                var hit = HitTest(x, y);
+                if (hit.Node != null && (hit.Location & (TreeViewHitTestLocations.Label | TreeViewHitTestLocations.Image)) != 0)
                 {
-                    DriveInfo di = new DriveInfo(path);
-                    if (di.DriveType == DriveType.CDRom)
-                    {
-                        // foobar2000のCDDAプロトコルとしてフォルダ追加APIに投げる
-                        FoobarBridge.AddFolder("cdda://" + path.TrimEnd('\\'));
-                        return;
-                    }
-                }
-
-                // 通常の直下ファイル追加処理
-                string[] files = Directory.GetFiles(path, "*.*", SearchOption.TopDirectoryOnly);
-                if (files.Length > 0)
-                {
-                    string delimitedPaths = string.Join("|", files);
-                    FoobarBridge.AddFiles(delimitedPaths);
+                    SelectedNode = hit.Node;
+                    OnNodeMouseDoubleClick(new TreeNodeMouseClickEventArgs(hit.Node, MouseButtons.Left, 2, x, y));
+                    m.Result = IntPtr.Zero;
+                    return;
                 }
             }
-            catch (UnauthorizedAccessException) { }
+            base.WndProc(ref m);
         }
     }
 }
