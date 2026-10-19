@@ -25,18 +25,20 @@ Expansion and double-click settings are saved in `explorer-settings.txt` beside 
 
 ## Installation / インストール方法
 
-1. Download the latest `foo_uie_explorer_x64.zip` from the [binary](../../tree/main/binary) folder.
+1. Open the [latest release](https://github.com/mk-822/foo_uie_explorer_x64/releases/latest) and download `foo_uie_explorer_x64.zip` from **Assets**.
 2. Open foobar2000 and go to **File > Preferences > Components**.
-3. Drag and drop the downloaded `.zip` file into the Components list.
+3. Click **Install...** and select the downloaded `foo_uie_explorer_x64.zip`, or drag and drop it into the Components list.
 4. Click **Apply** and restart foobar2000.
 5. Go to **Preferences > Display > Columns UI > Layout**, right-click on a splitter, select **Insert panel > Panels > Explorer Tree**, and apply.
+6. To change the double-click action, right-click the Explorer Tree panel and choose **Config...**. Tree expansion and this setting are saved automatically.
 
 **(日本語)**
-1. `binary` フォルダから最新の `foo_uie_explorer_x64.zip` をダウンロードします。
+1. [最新のリリース](https://github.com/mk-822/foo_uie_explorer_x64/releases/latest) を開き、**Assets** から `foo_uie_explorer_x64.zip` をダウンロードします。
 2. foobar2000 を開き、**File > Preferences > Components** を開きます。
-3. ダウンロードした `.zip` ファイルをコンポーネント一覧の領域にドラッグ＆ドロップします。
+3. **Install...** からダウンロードした `foo_uie_explorer_x64.zip` を選択するか、コンポーネント一覧にドラッグ＆ドロップします。
 4. **Apply** をクリックし、foobar2000 を再起動します。
-5. **Preferences > Display > Columns UI > Layout** に移動し、スプリッターを右クリックして **Insert panel > Panels > Explorer Tree** を追加してください。
+5. **Preferences > Display > Columns UI > Layout** に移動し、スプリッターを右クリックして **Insert panel > Panels > Explorer Tree** を追加し、適用します。
+6. ダブルクリック動作を変更する場合は、Explorer Treeパネルを右クリックし、**Config...** を開きます。ツリーの展開状態と設定は自動保存されます。
 
 ## Building from Source / ビルド方法
 
