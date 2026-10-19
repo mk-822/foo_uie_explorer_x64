@@ -35,6 +35,7 @@ namespace foo_uie_explorer_core
             InitializeComponent();
 
             treeView_explorer.BorderStyle = BorderStyle.None;
+            treeView_explorer.NodeMouseClick += treeView_explorer_NodeMouseClick;
 
             // 子ウィンドウとして動作させるための設定
             TopLevel = false;
@@ -88,6 +89,15 @@ namespace foo_uie_explorer_core
                 {
                     treeView_explorer.SelectedNode = clickedNode;
                 }
+            }
+        }
+
+        private void treeView_explorer_NodeMouseClick(object? sender, TreeNodeMouseClickEventArgs e)
+        {
+            // メディア挿入後は、＋がないドライブもクリックで再検証する。
+            if (e.Node != null && (e.Node.Tag as NodeType?) == NodeType.Drive && !e.Node.IsExpanded)
+            {
+                BuildChilds(e.Node);
             }
         }
 
@@ -317,6 +327,9 @@ namespace foo_uie_explorer_core
 
             try
             {
+                if (tag == NodeType.Drive && !new DriveInfo(path).IsReady)
+                    return false;
+
                 if (tag == NodeType.Folder && File.GetAttributes(path).HasFlag(FileAttributes.Hidden))
                     return false;
 
@@ -327,6 +340,7 @@ namespace foo_uie_explorer_core
                 }
             }
             catch (UnauthorizedAccessException) { return false; }
+            catch (IOException) { return false; }
             return true;
         }
 
@@ -355,6 +369,9 @@ namespace foo_uie_explorer_core
 
             try
             {
+                if (type == NodeType.Drive && !new DriveInfo(path).IsReady)
+                    return;
+
                 var dirs = Directory.GetDirectories(path);
                 foreach (var dir in dirs)
                 {
@@ -373,6 +390,7 @@ namespace foo_uie_explorer_core
                 }
             }
             catch (UnauthorizedAccessException) { }
+            catch (IOException) { }
         }
 
         private void treeView_explorer_AfterExpand(object sender, TreeViewEventArgs e)
